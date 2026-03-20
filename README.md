@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Study Companion
 
-## Getting Started
+Production-oriented Next.js application for study planning, quiz practice, weak-area tracking, and exam scheduling.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router
+- PostgreSQL for user accounts, session storage, rate limiting, and audit-style activity events
+- Hindsight for persistent study memory
+- Groq for quiz generation and study-plan synthesis
+
+## Routes
+
+- `/` public landing page
+- `/login` sign-in and account creation
+- `/app` protected student workspace
+- `/api/chat` authenticated study assistant endpoint
+- `/api/dashboard` authenticated dashboard data
+- `/api/profile` authenticated profile and password updates
+- `/api/schedule/study` authenticated study-session logging
+- `/api/schedule/exam` authenticated exam scheduling
+- `/api/webhook/openclaw` optional webhook, disabled unless `OPENCLAW_WEBHOOK_SECRET` is set
+
+## Environment
+
+Copy `.env.example` to `.env.local` and provide real credentials:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+APP_BASE_URL=http://localhost:3000
+
+HINDSIGHT_BASE_URL=https://api.hindsight.vectorize.io
+HINDSIGHT_API_KEY=
+HINDSIGHT_BANK_PREFIX=study-companion
+
+GROQ_API_KEY=
+GROQ_MODEL=llama3-70b-8192
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+POSTGRES_URL=
+OPENCLAW_WEBHOOK_SECRET=
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local Run
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Docker
 
-## Learn More
+The included `docker-compose.yml` runs the app and PostgreSQL with safer defaults:
 
-To learn more about Next.js, take a look at the following resources:
+- no pre-provisioned users
+- no seeded sample data endpoints
+- no public PostgreSQL port exposure
+- required secrets for PostgreSQL, Groq, and Hindsight
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Example:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+$env:POSTGRES_PASSWORD="replace-with-a-long-random-password"
+$env:GROQ_API_KEY="..."
+$env:HINDSIGHT_API_KEY="..."
+docker compose up --build
+```
 
-## Deploy on Vercel
+The app is exposed on `http://localhost:3000`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Security Controls In App Code
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- bcrypt password hashing with a 12-round cost
+- minimum 12-character password policy with upper/lowercase, number, and symbol
+- opaque session cookies with hashed session tokens in PostgreSQL
+- `__Host-` cookie prefix in production
+- session invalidation on password change
+- Google OAuth 2.0 Authorization Code flow with PKCE, state, and nonce validation
+- per-endpoint PostgreSQL-backed rate limiting
+- origin and referer validation on browser mutation endpoints
+- CSP, HSTS, frame blocking, MIME sniffing protection, and no-store headers on sensitive routes
+- authenticated data access bound to the signed-in user
+- OpenClaw webhook disabled by default unless an explicit secret is configured
+
+## Production Deployment Checklist
+
+- Put the app behind HTTPS only.
+- Store secrets in your platform secret manager, not in git or images.
+- Use a managed PostgreSQL instance with backups, network isolation, and SSL enforcement.
+- Restrict database ingress so only the app can reach it.
+- Rotate `OPENCLAW_WEBHOOK_SECRET`, database credentials, and API keys regularly.
+- Add platform logging, alerting, uptime checks, and error monitoring.
+- Run dependency and container image scanning in CI before deployment.
+
+## Verification
+
+The app should be validated before deployment with:
+
+```bash
+npm run lint
+npm run build
+```
+
+You should also perform live verification with real infrastructure:
+
+1. Create a real account through `/login`.
+2. Confirm login, logout, and password rotation work across multiple browser sessions.
+3. Verify study sessions, exams, quizzes, and plans persist for the signed-in user only.
+4. Confirm Hindsight records are written with the expected metadata envelope.
+5. Confirm the OpenClaw webhook returns `401` without a valid bearer secret.
+6. Confirm Google sign-in works only with the registered callback URL `${APP_BASE_URL}/api/auth/google/callback`.

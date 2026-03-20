@@ -1,0 +1,20 @@
+▲ Next.js 16.2.0
+- Local:         http://127.0.0.1:3103
+- Network:       http://127.0.0.1:3103
+✓ Ready in 0ms
+ensurePostgres failed: Error [ConfigError]: PostgreSQL is not configured. Set POSTGRES_URL in .env.local to enable login and live data.
+    at <unknown> (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\[root-of-the-server]__0k7x7.3._.js:1:2244)
+    at b (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\_0f5l.sq._.js:1:20022)
+    at <unknown> (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\_0f5l.sq._.js:2:152)
+    at o (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\_0f5l.sq._.js:26:21)
+    at i (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\_0f5l.sq._.js:26:178)
+    at s (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\[root-of-the-server]__0k7x7.3._.js:1:2690)
+    at async u (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\[root-of-the-server]__0k7x7.3._.js:1:6803)
+Login route failed Error [ConfigError]: PostgreSQL is not configured. Set POSTGRES_URL in .env.local to enable login and live data.
+    at <unknown> (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\[root-of-the-server]__0k7x7.3._.js:1:2244)
+    at b (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\_0f5l.sq._.js:1:20022)
+    at <unknown> (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\_0f5l.sq._.js:2:152)
+    at o (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\_0f5l.sq._.js:26:21)
+    at i (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\_0f5l.sq._.js:26:178)
+    at s (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\[root-of-the-server]__0k7x7.3._.js:1:2690)
+    at async u (C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\.next\standalone\.next\server\chunks\[root-of-the-server]__0k7x7.3._.js:1:6803)

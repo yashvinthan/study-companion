@@ -1,0 +1,12 @@
+▲ Next.js 16.2.0 (Turbopack)
+- Local:         http://localhost:3104
+- Network:       http://100.127.209.57:3104
+- Environments: .env.local
+✓ Ready in 670ms
+Creating turbopack project {
+  dir: 'C:\\Users\\yashv\\dev\\Hackathon Problem Statements\\hackwithbangalore-20\\study-companion',
+  testMode: true
+}
+
+ POST /api/auth/login 200 in 763ms (next.js: 450ms, application-code: 313ms)
+ GET /app/schedule 200 in 579ms (next.js: 137ms, application-code: 443ms)

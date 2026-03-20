@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #07111d;
+  --color-panel: rgba(13, 24, 39, 0.84);
+  --color-card: rgba(17, 30, 49, 0.96);
+  --color-card-soft: rgba(255, 255, 255, 0.04);
+  --color-text: #eff6ff;
+  --color-muted: #94a7c4;
+  --color-accent: #49d7b5;
+  --color-warm: #ffb86c;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --animate-blob: blob 7s infinite;
+  --animate-glow: glow 3s ease-in-out infinite alternate;
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+  @keyframes glow {
+    0% { box-shadow: 0 0 10px rgba(46, 209, 172, 0.2); }
+    100% { box-shadow: 0 0 30px rgba(46, 209, 172, 0.6); }
   }
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(73, 215, 181, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 184, 108, 0.12), transparent 22%),
+    linear-gradient(180deg, #08111b 0%, #050b13 100%);
+  color: var(--color-text);
+  font-family: var(--font-sans), sans-serif;
+}
+
+code,
+pre {
+  font-family: var(--font-mono), monospace;
+}
+
+::selection {
+  background: rgba(46, 209, 172, 0.3);
+  color: white;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(73, 215, 181, 0.9);
+  outline-offset: 2px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .app-shell-panel {
+    @apply rounded-[2rem] border border-white/10 bg-[color:var(--color-panel)] shadow-[0_24px_120px_rgba(0,0,0,0.42)] backdrop-blur-xl;
+  }
+
+  .app-card {
+    @apply rounded-[1.5rem] border border-white/10 bg-[color:var(--color-card)] shadow-[0_18px_60px_rgba(0,0,0,0.26)];
+  }
+
+  .app-card-soft {
+    @apply rounded-[1.25rem] border border-white/10 bg-white/[0.04];
+  }
+
+  .app-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)];
+  }
+
+  .app-title {
+    @apply text-balance text-3xl font-semibold tracking-[-0.04em] text-white;
+  }
+
+  .app-copy {
+    @apply text-sm leading-6 text-[var(--color-muted)];
+  }
+
+  .app-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-[var(--color-muted)];
+  }
+
+  .app-stat-card {
+    @apply rounded-[1.35rem] border border-white/10 bg-white/[0.04] p-4;
+  }
+
+  .app-action-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-slate-950 transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0;
+    touch-action: manipulation;
+  }
+
+  .app-action-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0;
+    touch-action: manipulation;
+  }
+
+  .app-input {
+    @apply h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm text-white placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:bg-black/30 focus:outline-none;
+  }
+
+  .app-select {
+    @apply h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm text-white focus:border-[var(--color-accent)] focus:bg-black/30 focus:outline-none;
+  }
+
+  .app-textarea {
+    @apply min-h-[120px] w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:bg-black/30 focus:outline-none;
+  }
 }

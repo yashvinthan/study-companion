@@ -1,0 +1,185 @@
+﻿
+> study-companion@0.1.0 build
+> next build
+
+node.exe : ΓÜá Warning: 
+Next.js inferred your 
+workspace root, but it 
+may not be correct.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C
+:\Users\yashv\AppData\Roa
+ming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo       
+       : NotSpecified:   
+  (ΓÜá Warning: Ne...n   
+ ot be correct.:Strin    
+g) [], RemoteExcepti    
+on
+    + FullyQualifiedErro 
+   rId : NativeCommandE  
+  rror
+ 
+ We detected multiple 
+lockfiles and selected 
+the directory of C:\Users
+\yashv\dev\package-lock.j
+son as the root 
+directory.
+ To silence this 
+warning, set 
+`turbopack.root` in your 
+Next.js config, or 
+consider removing one of 
+the lockfiles if it's 
+not needed.
+   See https://nextjs.org
+/docs/app/api-reference/c
+onfig/next-config-js/turb
+opack#root-directory for 
+more information.
+ Detected additional 
+lockfiles: 
+   * C:\Users\yashv\dev\H
+ackathon Problem Statemen
+ts\hackwithbangalore-20\s
+tudy-companion\package-lo
+ck.json
+
+Γû▓ Next.js 16.2.0 (Turbopack)
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build 
+failed with 2 errors:
+./Hackathon Problem State
+ments/hackwithbangalore-2
+0/study-companion/src/com
+ponents/ChatInterface.tsx
+:4:1
+Module not found: Can't 
+resolve 'ai/react'
+  [90m2 |[0m
+  [90m3 |[0m 
+[36mimport[0m { c 
+[36mas[0m _c } 
+[36mfrom[0m [32m"react
+/compiler-runtime"[0m;
+[31m[1m>[0m [90m4 
+|[0m [36mimport[0m { 
+useChat } [36mfrom[0m 
+[32m'ai/react'[0m;
+  [90m  |[0m [31m[1m^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^[0m
+  [90m5 |[0m 
+[36mimport[0m { 
+[33mSend[0m, 
+[33mLoader2[0m, 
+[33mBot[0m, 
+[33mUser[0m } 
+[36mfrom[0m 
+[32m'lucide-react'[0m;
+  [90m6 |[0m 
+[36mimport[0m { 
+useEffect, useRef } 
+[36mfrom[0m 
+[32m'react'[0m;
+  [90m7 |[0m 
+[36mexport[0m 
+[36mdefault[0m 
+[36mfunction[0m 
+[33mChatInterface[0m() 
+{
+
+
+
+Import trace:
+  Server Component:
+    ./Hackathon Problem S
+tatements/hackwithbangalo
+re-20/study-companion/src
+/components/ChatInterface
+.tsx
+    ./Hackathon Problem S
+tatements/hackwithbangalo
+re-20/study-companion/src
+/app/page.tsx
+
+https://nextjs.org/docs/m
+essages/module-not-found
+
+
+./Hackathon Problem State
+ments/hackwithbangalore-2
+0/study-companion/src/com
+ponents/ChatInterface.tsx
+:3:1
+Module not found: Can't 
+resolve 'ai/react'
+  [90m1 |[0m [32m'use 
+client'[0m;
+  [90m2 |[0m
+[31m[1m>[0m [90m3 
+|[0m [36mimport[0m { 
+useChat } [36mfrom[0m 
+[32m'ai/react'[0m;
+  [90m  |[0m [31m[1m^
+^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^[0m
+  [90m4 |[0m 
+[36mimport[0m { 
+[33mSend[0m, 
+[33mLoader2[0m, 
+[33mBot[0m, 
+[33mUser[0m } 
+[36mfrom[0m 
+[32m'lucide-react'[0m;
+  [90m5 |[0m 
+[36mimport[0m { 
+useEffect, useRef } 
+[36mfrom[0m 
+[32m'react'[0m;
+  [90m6 |[0m
+
+
+
+Import trace:
+  Server Component:
+    ./Hackathon Problem S
+tatements/hackwithbangalo
+re-20/study-companion/src
+/components/ChatInterface
+.tsx
+    ./Hackathon Problem S
+tatements/hackwithbangalo
+re-20/study-companion/src
+/app/page.tsx
+
+https://nextjs.org/docs/m
+essages/module-not-found
+
+
+    at <unknown> 
+(./Hackathon Problem Stat
+ements/hackwithbangalore-
+20/study-companion/src/co
+mponents/ChatInterface.ts
+x:4:1)
+    at <unknown> (https:/
+/nextjs.org/docs/messages
+/module-not-found)
+    at <unknown> 
+(./Hackathon Problem Stat
+ements/hackwithbangalore-
+20/study-companion/src/co
+mponents/ChatInterface.ts
+x:3:1)
+    at <unknown> (https:/
+/nextjs.org/docs/messages
+/module-not-found)

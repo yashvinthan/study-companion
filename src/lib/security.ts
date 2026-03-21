@@ -1,6 +1,13 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { assertAppBaseUrl } from '@/lib/config';
 
+export class CorsValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CorsValidationError';
+  }
+}
+
 export function createOpaqueToken(size = 32) {
   return randomBytes(size).toString('hex');
 }
@@ -73,10 +80,10 @@ export function assertTrustedOrigin(request: Request) {
   }
 
   if (!origin && !referer && !fetchSite) {
-    throw new Error('Request origin could not be verified.');
+    throw new CorsValidationError('Request origin could not be verified.');
   }
 
-  throw new Error('Cross-origin requests are not allowed for this endpoint.');
+  throw new CorsValidationError('Cross-origin requests are not allowed for this endpoint.');
 }
 
 export function getSessionCookieOptions(expires: Date) {

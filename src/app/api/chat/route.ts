@@ -8,7 +8,7 @@ import { assertGroqConfig, ConfigError } from '@/lib/config';
 import { getGroqModelName } from '@/lib/llm';
 import { memoryStore, MemoryStoreError } from '@/lib/memory/MemoryStore';
 import { enforceRateLimit, recordLiveEvent } from '@/lib/postgres';
-import { assertTrustedOrigin } from '@/lib/security';
+import { CorsValidationError, assertTrustedOrigin } from '@/lib/security';
 import { searchWeb, type SearchMode, type WebSearchResult } from '@/lib/web-search';
 
 export const dynamic = 'force-dynamic';
@@ -1276,11 +1276,7 @@ export async function POST(request: Request) {
       return textResponse(error.message, 429);
     }
 
-    if (
-      error instanceof Error &&
-      (error.message === 'Cross-origin requests are not allowed for this endpoint.' ||
-        error.message === 'Request origin could not be verified.')
-    ) {
+    if (error instanceof CorsValidationError) {
       return textResponse('Forbidden request origin.', 403);
     }
 

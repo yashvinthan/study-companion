@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { HindsightClient } from '@vectorize-io/hindsight-client';
 import { createHindsightTools } from '@vectorize-io/hindsight-ai-sdk';
 import { assertMemoryConfig } from '@/lib/config';
@@ -343,58 +344,60 @@ export class MemoryStore {
     );
   }
 
-  async listEntries<T extends StoredEntry = StoredEntry>(
-    studentId: string,
-    entryType?: MemoryEntryType,
-  ): Promise<T[]> {
-    await withRetries(() => this.ensureReady(studentId), 3, 400);
+  listEntries = cache(
+    async <T extends StoredEntry = StoredEntry>(
+      studentId: string,
+      entryType?: MemoryEntryType,
+    ): Promise<T[]> => {
+      await withRetries(() => this.ensureReady(studentId), 3, 400);
 
-    const bankId = this.getBankId(studentId);
-    const client = this.getClient();
-    const items: RawMemoryUnit[] = [];
-    let offset = 0;
-    let total = 0;
+      const bankId = this.getBankId(studentId);
+      const client = this.getClient();
+      const items: RawMemoryUnit[] = [];
+      let offset = 0;
+      let total = 0;
 
-    do {
-      const response = await withTimeout(
-        client.listMemories(bankId, {
-          limit: 100,
-          offset,
-        }),
-        'Hindsight listMemories',
-      );
+      do {
+        const response = await withTimeout(
+          client.listMemories(bankId, {
+            limit: 100,
+            offset,
+          }),
+          'Hindsight listMemories',
+        );
 
-      const pageItems = (response.items ?? []) as RawMemoryUnit[];
-      items.push(...pageItems);
-      total = response.total;
-      offset += pageItems.length;
-    } while (offset < total);
+        const pageItems = (response.items ?? []) as RawMemoryUnit[];
+        items.push(...pageItems);
+        total = response.total;
+        offset += pageItems.length;
+      } while (offset < total);
 
-    const parsedEntries = items
-      .map((item) => {
-        const entry = parseStoredEntry({
-          context: item.context,
-          metadata: item.metadata,
-        });
+      const parsedEntries = items
+        .map((item) => {
+          const entry = parseStoredEntry({
+            context: item.context,
+            metadata: item.metadata,
+          });
 
-        if (!entry) {
-          return null;
-        }
+          if (!entry) {
+            return null;
+          }
 
-        if (entry.student_id !== studentId) {
-          return null;
-        }
+          if (entry.student_id !== studentId) {
+            return null;
+          }
 
-        if (entryType && entry.entry_type !== entryType) {
-          return null;
-        }
+          if (entryType && entry.entry_type !== entryType) {
+            return null;
+          }
 
-        return entry;
-      })
-      .filter((entry): entry is T => entry !== null);
+          return entry;
+        })
+        .filter((entry): entry is T => entry !== null);
 
-    return sortEntries(parsedEntries);
-  }
+      return sortEntries(parsedEntries);
+    },
+  );
 
   async getLatestEntry<T extends StoredEntry = StoredEntry>(
     studentId: string,

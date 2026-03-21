@@ -4,6 +4,7 @@ import { getGroqModel } from '@/lib/llm';
 import { memoryStore } from '@/lib/memory/MemoryStore';
 import type { QuizPromptEntry, QuizQuestion, QuizRecord } from '@/lib/types';
 import { normalizeAnswer } from '@/lib/utils';
+import { resolveMultipleChoiceAnswer } from './Quiz_Engine_utils';
 
 const QUIZ_LLM_TIMEOUT_MS = 20_000;
 const QUIZ_HISTORY_TIMEOUT_MS = 2_500;
@@ -29,18 +30,6 @@ const GROQ_PROVIDER_OPTIONS = {
     service_tier: 'on_demand',
   },
 } as const;
-
-function resolveMultipleChoiceAnswer(options: string[], rawAnswer: string) {
-  const trimmed = rawAnswer.trim();
-  const letterMatch = trimmed.match(/^([A-D])(?:[).:\s-]|$)/i);
-
-  if (!letterMatch) {
-    return trimmed;
-  }
-
-  const index = letterMatch[1].toUpperCase().charCodeAt(0) - 65;
-  return options[index] ?? trimmed;
-}
 
 function normalizeQuestionAnswer(question: QuizQuestion, rawAnswer: string) {
   if (question.format === 'multiple_choice') {

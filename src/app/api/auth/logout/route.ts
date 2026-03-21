@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME } from '@/lib/auth';
 import { deleteAuthSession, getAuthSession, recordLiveEvent } from '@/lib/postgres';
-import { assertTrustedOrigin, getSessionCookieOptions } from '@/lib/security';
+import { CorsValidationError, assertTrustedOrigin, getSessionCookieOptions } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,11 +54,7 @@ async function handleLogout(request: Request) {
   } catch (error) {
     console.error('Logout route failed', error);
 
-    if (
-      error instanceof Error &&
-      (error.message === 'Cross-origin requests are not allowed for this endpoint.' ||
-        error.message === 'Request origin could not be verified.')
-    ) {
+    if (error instanceof CorsValidationError) {
       return NextResponse.json({ error: 'Forbidden request origin.' }, { status: 403 });
     }
 

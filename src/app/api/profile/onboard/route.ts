@@ -6,7 +6,7 @@ import {
   enforceRateLimit,
   recordLiveEvent,
 } from '@/lib/postgres';
-import { assertTrustedOrigin } from '@/lib/security';
+import { CorsValidationError, assertTrustedOrigin } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,11 +66,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 429 });
     }
 
-    if (
-      error instanceof Error &&
-      (error.message === 'Cross-origin requests are not allowed for this endpoint.' ||
-        error.message === 'Request origin could not be verified.')
-    ) {
+    if (error instanceof CorsValidationError) {
       return NextResponse.json({ error: 'Forbidden request origin.' }, { status: 403 });
     }
 

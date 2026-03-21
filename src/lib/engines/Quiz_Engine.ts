@@ -30,7 +30,7 @@ const GROQ_PROVIDER_OPTIONS = {
   },
 } as const;
 
-function resolveMultipleChoiceAnswer(options: string[], rawAnswer: string) {
+export function resolveMultipleChoiceAnswer(options: string[], rawAnswer: string) {
   const trimmed = rawAnswer.trim();
   const letterMatch = trimmed.match(/^([A-D])(?:[).:\s-]|$)/i);
 
@@ -42,7 +42,7 @@ function resolveMultipleChoiceAnswer(options: string[], rawAnswer: string) {
   return options[index] ?? trimmed;
 }
 
-function normalizeQuestionAnswer(question: QuizQuestion, rawAnswer: string) {
+export function normalizeQuestionAnswer(question: QuizQuestion, rawAnswer: string) {
   if (question.format === 'multiple_choice') {
     return resolveMultipleChoiceAnswer(question.options, rawAnswer);
   }

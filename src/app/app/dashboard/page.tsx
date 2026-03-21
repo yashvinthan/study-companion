@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, Radar } from 'lucide-react';
 import AppPageHeader from '@/components/AppPageHeader';
 import Dashboard from '@/components/Dashboard';
+import WorkspaceFeatures from '@/components/WorkspaceFeatures';
 import { getCurrentSession } from '@/lib/auth';
 import { getDashboardData } from '@/lib/dashboard';
 
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
       />
 
       <Dashboard data={data} loading={false} error="" />
+      <WorkspaceFeatures />
     </div>
   );
 }

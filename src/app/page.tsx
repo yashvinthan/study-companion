@@ -1,7 +1,19 @@
 import Link from 'next/link';
-import { ArrowRight, Brain, LockKeyhole, ShieldCheck, Timer, Zap, Paperclip } from 'lucide-react';
+import { ArrowRight, Brain, LockKeyhole, Timer, Zap, Paperclip } from 'lucide-react';
+import type { Metadata } from 'next';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+
+const appUrl = process.env.APP_BASE_URL?.replace(/\/+$/, '') || 'https://studytether.online';
+
+export const metadata: Metadata = {
+  title: 'AI Study Coach for Exam Success',
+  description:
+    'Use StudyTether to generate tailored study plans, track weak areas, and stay consistent with AI-guided revision.',
+  alternates: {
+    canonical: '/',
+  },
+};
 
 const features = [
   {
@@ -51,8 +63,36 @@ const features = [
 ];
 
 export default function Home() {
+  const organizationStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'StudyTether',
+    url: appUrl,
+    logo: `${appUrl}/favicon.ico`,
+  };
+
+  const websiteStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'StudyTether',
+    url: appUrl,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${appUrl}/app/chat?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-[#0d1117] text-[var(--color-text)] relative overflow-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
+      />
       <Header />
 
       <main className="relative flex-1">
@@ -77,11 +117,11 @@ export default function Home() {
                   Focus on mastering. <br />
                   <span className="relative inline-block mt-2">
                     <span className="absolute inset-x-0 bottom-3 h-5 bg-emerald-400/30 -skew-x-12" />
-                    <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-emerald-100 to-white">We'll handle the memory.</span>
+                    <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-emerald-100 to-white">We&apos;ll handle the memory.</span>
                   </span>
                 </h1>
                 <p className="max-w-2xl mx-auto text-lg leading-8 text-slate-400 mt-6 font-medium">
-                  An intelligent study companion that tracks your weak areas, builds custom revision plans, and ensures you never forget what you've learned.
+                  StudyTether tracks your weak areas, builds custom revision plans, and makes sure you never lose learning momentum.
                 </p>
               </div>
 

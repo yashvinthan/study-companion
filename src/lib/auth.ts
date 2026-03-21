@@ -6,10 +6,10 @@ function getScopedCookieName(name: string) {
   return process.env.NODE_ENV === 'production' ? `__Host-${name}` : name;
 }
 
-export const AUTH_COOKIE_NAME = getScopedCookieName('study_companion_session');
-export const GOOGLE_OAUTH_STATE_COOKIE_NAME = getScopedCookieName('study_companion_google_state');
-export const GOOGLE_OAUTH_VERIFIER_COOKIE_NAME = getScopedCookieName('study_companion_google_verifier');
-export const GOOGLE_OAUTH_NONCE_COOKIE_NAME = getScopedCookieName('study_companion_google_nonce');
+export const AUTH_COOKIE_NAME = getScopedCookieName('studytether_session');
+export const GOOGLE_OAUTH_STATE_COOKIE_NAME = getScopedCookieName('studytether_google_state');
+export const GOOGLE_OAUTH_VERIFIER_COOKIE_NAME = getScopedCookieName('studytether_google_verifier');
+export const GOOGLE_OAUTH_NONCE_COOKIE_NAME = getScopedCookieName('studytether_google_nonce');
 
 export async function getCurrentSession() {
   const cookieStore = await cookies();

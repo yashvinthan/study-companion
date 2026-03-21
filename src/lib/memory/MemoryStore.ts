@@ -1,4 +1,5 @@
 import { HindsightClient } from '@vectorize-io/hindsight-client';
+import { createHindsightTools } from '@vectorize-io/hindsight-ai-sdk';
 import { assertMemoryConfig } from '@/lib/config';
 import type {
   ChatEvent,
@@ -19,15 +20,52 @@ type RawMemoryUnit = {
   document_id?: string | null;
 };
 
-class MemoryStoreError extends Error {
+export class MemoryStoreError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'MemoryStoreError';
   }
 }
 
+const HINDSIGHT_REQUEST_TIMEOUT_MS =
+  Number.parseInt(process.env.HINDSIGHT_REQUEST_TIMEOUT_MS ?? '30000', 10) || 30_000;
+const HINDSIGHT_RETAIN_ASYNC = process.env.HINDSIGHT_RETAIN_ASYNC !== 'false';
+const HINDSIGHT_RETAIN_ATTEMPTS = Number.parseInt(process.env.HINDSIGHT_RETAIN_ATTEMPTS ?? '3', 10) || 3;
+
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withRetries<T>(
+  operation: () => Promise<T>,
+  attempts = 3,
+  baseDelayMs = 300,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) {
+        await delay(baseDelayMs * 2 ** attempt);
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+function withTimeout<T>(operation: Promise<T>, label: string, timeoutMs = HINDSIGHT_REQUEST_TIMEOUT_MS) {
+  return Promise.race([
+    operation,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => {
+        reject(new MemoryStoreError(`${label} timed out after ${timeoutMs}ms.`));
+      }, timeoutMs);
+    }),
+  ]);
 }
 
 function buildSummary(entry: StoredEntry) {
@@ -112,12 +150,13 @@ function parseStoredEntry({
   context?: string | null;
   metadata?: Record<string, string> | null;
 }) {
-  if (!context) {
+  const payloadBuffer = metadata?.payload || context;
+  if (!payloadBuffer) {
     return null;
   }
 
   try {
-    const parsed = JSON.parse(context) as StoredEntry;
+    const parsed = JSON.parse(payloadBuffer) as StoredEntry;
 
     if (!parsed || typeof parsed !== 'object' || !metadata?.entry_type) {
       return null;
@@ -151,6 +190,14 @@ export class MemoryStore {
     return this.client;
   }
 
+  getTools(studentId: string) {
+    return createHindsightTools({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      client: this.getClient() as any,
+      bankId: this.getBankId(studentId),
+    });
+  }
+
   private getBankId(studentId: string) {
     const config = assertMemoryConfig();
     return `${config.hindsightBankPrefix}-${slugify(studentId) || 'student'}`;
@@ -164,14 +211,16 @@ export class MemoryStore {
       return existing;
     }
 
-    const pending = this.getClient()
-      .createBank(bankId, {
-        name: `AI Study Companion - ${studentId}`,
+    const pending = withTimeout(
+      this.getClient().createBank(bankId, {
+        name: `StudyTether - ${studentId}`,
         reflectMission:
           'Remember the student study journey accurately. Use retained quiz, mistake, schedule, and plan memories as the source of truth.',
         retainMission:
           'Capture structured student study history faithfully. Preserve subjects, topics, quiz accuracy, study habits, and exam deadlines.',
-      })
+      }),
+      'Hindsight bank initialization',
+    )
       .then(() => undefined)
       .catch((error: unknown) => {
         this.ensuredBanks.delete(bankId);
@@ -186,7 +235,7 @@ export class MemoryStore {
 
   async getConnectionStatus(studentId: string) {
     try {
-      await this.ensureReady(studentId);
+      await withRetries(() => this.ensureReady(studentId), 3, 400);
       return {
         ok: true,
         message: 'Connected to Hindsight persistent memory.',
@@ -203,30 +252,35 @@ export class MemoryStore {
   }
 
   async retainEntry(entry: StoredEntry, extraTags: string[] = []) {
-    await this.ensureReady(entry.student_id);
+    await withRetries(() => this.ensureReady(entry.student_id), 3, 400);
 
     const bankId = this.getBankId(entry.student_id);
-    const content = buildSummary(entry);
-    const context = JSON.stringify(entry);
-    const metadata = buildMetadata(entry);
+    const content = JSON.stringify(entry);
+    const context = buildSummary(entry);
+    const metadata = { ...buildMetadata(entry), payload: JSON.stringify(entry) };
     const tags = buildTags(entry, extraTags);
     const client = this.getClient();
 
     let lastError: unknown;
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < HINDSIGHT_RETAIN_ATTEMPTS; attempt += 1) {
       try {
-        await client.retain(bankId, content, {
-          context,
-          metadata,
-          tags,
-          timestamp: entry.timestamp,
-          documentId: `${entry.entry_type}-${entry.session_id}-${entry.timestamp}`,
-        });
+        await withTimeout(
+          client.retain(bankId, content, {
+            context,
+            metadata,
+            tags,
+            timestamp: entry.timestamp,
+            documentId: `${entry.entry_type}-${entry.session_id}-${entry.timestamp}`,
+            // Retain can run in background to avoid blocking app responses on extraction latency.
+            async: HINDSIGHT_RETAIN_ASYNC,
+          }),
+          'Hindsight retain',
+        );
         return;
       } catch (error) {
         lastError = error;
-        if (attempt < 2) {
+        if (attempt < HINDSIGHT_RETAIN_ATTEMPTS - 1) {
           await delay(300 * 2 ** attempt);
         }
       }
@@ -252,13 +306,17 @@ export class MemoryStore {
       tags?: string[];
     },
   ): Promise<MemorySearchResult[]> {
-    await this.ensureReady(studentId);
+    await withRetries(() => this.ensureReady(studentId), 3, 400);
 
-    const response = await this.getClient().recall(this.getBankId(studentId), query, {
-      budget: 'mid',
-      tags: options?.tags,
-      tagsMatch: 'all_strict',
-    });
+    const response = await withTimeout(
+      this.getClient().recall(this.getBankId(studentId), query, {
+        budget: 'mid',
+        tags: options?.tags,
+        tagsMatch: 'all_strict',
+        queryTimestamp: new Date().toISOString(),
+      }),
+      'Hindsight recall',
+    );
 
     return response.results.slice(0, options?.limit ?? 6).map((result) => {
       const entry = parseStoredEntry(result);
@@ -274,11 +332,22 @@ export class MemoryStore {
     });
   }
 
+  async reflect(studentId: string, query: string, context?: string) {
+    await withRetries(() => this.ensureReady(studentId), 3, 400);
+    return withTimeout(
+      this.getClient().reflect(this.getBankId(studentId), query, {
+        context,
+        budget: 'mid',
+      }),
+      'Hindsight reflect',
+    );
+  }
+
   async listEntries<T extends StoredEntry = StoredEntry>(
     studentId: string,
     entryType?: MemoryEntryType,
   ): Promise<T[]> {
-    await this.ensureReady(studentId);
+    await withRetries(() => this.ensureReady(studentId), 3, 400);
 
     const bankId = this.getBankId(studentId);
     const client = this.getClient();
@@ -287,10 +356,13 @@ export class MemoryStore {
     let total = 0;
 
     do {
-      const response = await client.listMemories(bankId, {
-        limit: 100,
-        offset,
-      });
+      const response = await withTimeout(
+        client.listMemories(bankId, {
+          limit: 100,
+          offset,
+        }),
+        'Hindsight listMemories',
+      );
 
       const pageItems = (response.items ?? []) as RawMemoryUnit[];
       items.push(...pageItems);

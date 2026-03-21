@@ -32,17 +32,31 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      hindsight:
+        condition: service_started
+      searxng:
+        condition: service_started
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV:-development}
       POSTGRES_URL: postgres://${POSTGRES_USER:-studycompanion}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your environment}@postgres:5432/${POSTGRES_DB:-study_companion}
       GROQ_API_KEY: ${GROQ_API_KEY:?Set GROQ_API_KEY in your environment}
-      GROQ_MODEL: ${GROQ_MODEL:-llama3-70b-8192}
-      HINDSIGHT_BASE_URL: ${HINDSIGHT_BASE_URL:-https://api.hindsight.vectorize.io}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
+      HINDSIGHT_BASE_URL: http://hindsight:8888
       HINDSIGHT_API_KEY: ${HINDSIGHT_API_KEY:?Set HINDSIGHT_API_KEY in your environment}
-      HINDSIGHT_BANK_PREFIX: ${HINDSIGHT_BANK_PREFIX:-study-companion}
+      HINDSIGHT_BANK_PREFIX: ${HINDSIGHT_BANK_PREFIX:-studytether}
+      HINDSIGHT_RETAIN_ASYNC: ${HINDSIGHT_RETAIN_ASYNC:-true}
+      HINDSIGHT_REQUEST_TIMEOUT_MS: ${HINDSIGHT_REQUEST_TIMEOUT_MS:-12000}
+      HINDSIGHT_RETAIN_ATTEMPTS: ${HINDSIGHT_RETAIN_ATTEMPTS:-2}
+      SEARXNG_BASE_URL: ${SEARXNG_BASE_URL:-http://searxng:8080}
+      SERPER_API_KEY: ${SERPER_API_KEY:-}
+      CHAT_ALLOWED_MODELS: ${CHAT_ALLOWED_MODELS:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       OPENCLAW_WEBHOOK_SECRET: ${OPENCLAW_WEBHOOK_SECRET:-}
@@ -57,5 +71,63 @@ services:
       retries: 5
       start_period: 30s
 
+  hindsight:
+    image: ghcr.io/vectorize-io/hindsight:latest
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+      - "9999:9999"
+    environment:
+      HINDSIGHT_API_LLM_PROVIDER: ${HINDSIGHT_API_LLM_PROVIDER:-groq}
+      HINDSIGHT_API_LLM_API_KEY: ${GROQ_API_KEY:?Set GROQ_API_KEY in your environment for Hindsight}
+      HINDSIGHT_API_LLM_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+      HINDSIGHT_API_LLM_GROQ_SERVICE_TIER: ${HINDSIGHT_API_LLM_GROQ_SERVICE_TIER:-on_demand}
+      HINDSIGHT_API_RETAIN_LLM_PROVIDER: ${HINDSIGHT_API_RETAIN_LLM_PROVIDER:-groq}
+      HINDSIGHT_API_RETAIN_LLM_API_KEY: ${GROQ_API_KEY:?Set GROQ_API_KEY in your environment for Hindsight retain}
+      HINDSIGHT_API_RETAIN_LLM_MODEL: ${HINDSIGHT_API_RETAIN_LLM_MODEL:-openai/gpt-oss-20b}
+      HINDSIGHT_API_RETAIN_LLM_MAX_CONCURRENT: ${HINDSIGHT_API_RETAIN_LLM_MAX_CONCURRENT:-2}
+      HINDSIGHT_API_RETAIN_LLM_MAX_RETRIES: ${HINDSIGHT_API_RETAIN_LLM_MAX_RETRIES:-3}
+      HINDSIGHT_API_RETAIN_LLM_TIMEOUT: ${HINDSIGHT_API_RETAIN_LLM_TIMEOUT:-30}
+      HINDSIGHT_API_RETAIN_CHUNK_SIZE: ${HINDSIGHT_API_RETAIN_CHUNK_SIZE:-3000}
+      HINDSIGHT_API_RETAIN_MAX_COMPLETION_TOKENS: ${HINDSIGHT_API_RETAIN_MAX_COMPLETION_TOKENS:-4000}
+      HINDSIGHT_API_RETAIN_EXTRACTION_MODE: ${HINDSIGHT_API_RETAIN_EXTRACTION_MODE:-concise}
+    volumes:
+      - hindsight_data:/home/hindsight/.pg0
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "6379"
+
+  searxng:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - redis
+    expose:
+      - "8080"
+    environment:
+      SEARXNG_BASE_URL: ${SEARXNG_BASE_URL:-http://localhost:8080/}
+      SEARXNG_REDIS_URL: redis://redis:6379/0
+      SEARXNG_SECRET_KEY: ${SEARXNG_SECRET_KEY:?Set SEARXNG_SECRET_KEY in your environment}
+    volumes:
+      - ./docker/searxng/settings.yml:/etc/searxng/settings.yml
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- 'http://127.0.0.1:8080/search?q=test&format=json' >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+
 volumes:
   pgdata:
+  hindsight_data:

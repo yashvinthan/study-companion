@@ -1,4 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { assertAppBaseUrl } from '@/lib/config';
 
 export function createOpaqueToken(size = 32) {
   return randomBytes(size).toString('hex');
@@ -29,27 +30,53 @@ export function getClientIp(request: Request) {
   return request.headers.get('x-real-ip')?.trim() || 'unknown';
 }
 
+function isTrustedRequestUrl(candidate: string | null, expectedUrl: URL) {
+  if (!candidate || candidate === 'null') {
+    return false;
+  }
+
+  try {
+    const candidateUrl = new URL(candidate);
+    return candidateUrl.host === expectedUrl.host && candidateUrl.protocol === expectedUrl.protocol;
+  } catch {
+    return false;
+  }
+}
+
 export function assertTrustedOrigin(request: Request) {
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
-  const url = new URL(request.url);
-  const expectedOrigin = `${url.protocol}//${url.host}`;
+  const fetchSite = request.headers.get('sec-fetch-site');
+  const expectedUrl = new URL(assertAppBaseUrl());
+  const requestUrl = new URL(request.url);
+  const forwardedHost = request.headers.get('x-forwarded-host')?.trim();
+  const requestHost = forwardedHost || request.headers.get('host')?.trim() || requestUrl.host;
+  const requestProtocol = request.headers.get('x-forwarded-proto')?.trim() || requestUrl.protocol.replace(':', '');
+  const runtimeUrl = new URL(`${requestProtocol}://${requestHost}`);
 
-  if (origin) {
-    if (origin !== expectedOrigin) {
-      throw new Error('Cross-origin requests are not allowed for this endpoint.');
-    }
+  if (
+    isTrustedRequestUrl(origin, expectedUrl) ||
+    isTrustedRequestUrl(referer, expectedUrl) ||
+    isTrustedRequestUrl(origin, runtimeUrl) ||
+    isTrustedRequestUrl(referer, runtimeUrl)
+  ) {
     return;
   }
 
-  if (referer) {
-    if (new URL(referer).origin !== expectedOrigin) {
-      throw new Error('Cross-origin requests are not allowed for this endpoint.');
-    }
+  // Some browsers send `Origin: null` on document form posts, so fall back to fetch metadata.
+  if (fetchSite === 'same-origin') {
     return;
   }
 
-  throw new Error('Request origin could not be verified.');
+  if (!origin && !referer && !fetchSite && process.env.NODE_ENV !== 'production') {
+    return;
+  }
+
+  if (!origin && !referer && !fetchSite) {
+    throw new Error('Request origin could not be verified.');
+  }
+
+  throw new Error('Cross-origin requests are not allowed for this endpoint.');
 }
 
 export function getSessionCookieOptions(expires: Date) {

@@ -1,0 +1,8 @@
+
+C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\src\app\page.tsx
+   2:42   warning  'ShieldCheck' is defined but never used                          @typescript-eslint/no-unused-vars
+  80:123  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  84:146  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+✖ 3 problems (2 errors, 1 warning)
+

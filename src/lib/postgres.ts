@@ -6,11 +6,12 @@ import type {
   AuthSession,
   AuthenticatedUser,
   RecentLiveEvent,
+  StudyPlanRecord,
 } from '@/lib/types';
 
 declare global {
-  var __studyCompanionPool: Pool | undefined;
-  var __studyCompanionDbReady: Promise<void> | undefined;
+  var __studyTetherPool: Pool | undefined;
+  var __studyTetherDbReady: Promise<void> | undefined;
 }
 
 const PASSWORD_HASH_ROUNDS = 12;
@@ -33,6 +34,10 @@ type UserSnapshotRow = {
   created_at: string | null;
   last_login_at: string | null;
   active_session_count: string;
+  onboarding_completed: boolean;
+  study_country: string | null;
+  study_board: string | null;
+  study_grade: string | null;
 };
 
 type UserCredentialsRow = {
@@ -42,6 +47,11 @@ type UserCredentialsRow = {
   auth_provider: 'password' | 'google' | 'password_google';
   google_sub: string | null;
   password_hash: string | null;
+};
+
+type LoginLookupRow = {
+  id: string;
+  has_password: boolean;
 };
 
 type LiveEventRow = {
@@ -82,8 +92,8 @@ function getAuthProvider(hasPassword: boolean, hasGoogle: boolean) {
 }
 
 export function getPool() {
-  if (!global.__studyCompanionPool) {
-    global.__studyCompanionPool = new Pool({
+  if (!global.__studyTetherPool) {
+    global.__studyTetherPool = new Pool({
       connectionString: getPostgresUrl(),
       max: 10,
       idleTimeoutMillis: 30_000,
@@ -91,12 +101,12 @@ export function getPool() {
     });
   }
 
-  return global.__studyCompanionPool;
+  return global.__studyTetherPool;
 }
 
 export async function ensurePostgres() {
-  if (!global.__studyCompanionDbReady) {
-    global.__studyCompanionDbReady = (async () => {
+  if (!global.__studyTetherDbReady) {
+    global.__studyTetherDbReady = (async () => {
       const pool = getPool();
 
       await pool.query('create extension if not exists pgcrypto');
@@ -123,6 +133,22 @@ export async function ensurePostgres() {
       await pool.query(`
         alter table app_users
         add column if not exists auth_provider text not null default 'password'
+      `);
+      await pool.query(`
+        alter table app_users
+        add column if not exists onboarding_completed boolean not null default false
+      `);
+      await pool.query(`
+        alter table app_users
+        add column if not exists study_country text
+      `);
+      await pool.query(`
+        alter table app_users
+        add column if not exists study_board text
+      `);
+      await pool.query(`
+        alter table app_users
+        add column if not exists study_grade text
       `);
       await pool.query(`
         update app_users
@@ -189,6 +215,14 @@ export async function ensurePostgres() {
         )
       `);
       await pool.query(`
+        create table if not exists app_study_plans (
+          student_id text primary key,
+          plan_json jsonb not null,
+          generated_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        )
+      `);
+      await pool.query(`
         create table if not exists app_rate_limits (
           bucket_key text primary key,
           scope text not null,
@@ -205,13 +239,13 @@ export async function ensurePostgres() {
       await pool.query(`delete from app_sessions where expires_at <= now()`);
       await pool.query(`delete from app_rate_limits where updated_at < now() - interval '7 days'`);
     })().catch((error) => {
-      global.__studyCompanionDbReady = undefined;
+      global.__studyTetherDbReady = undefined;
       console.error('ensurePostgres failed:', error);
       throw error;
     });
   }
 
-  return global.__studyCompanionDbReady;
+  return global.__studyTetherDbReady;
 }
 
 function mapSessionRow(row: SessionRow): AuthSession {
@@ -299,6 +333,31 @@ export async function authenticateUser(email: string, password: string) {
     email: row.email,
     fullName: row.full_name,
   } satisfies AuthenticatedUser;
+}
+
+export async function lookupUserForLogin(email: string) {
+  await ensurePostgres();
+  const pool = getPool();
+  const result = await pool.query<LoginLookupRow>(
+    `select id, (password_hash is not null) as has_password
+     from app_users
+     where email = $1
+     limit 1`,
+    [normalizeEmail(email)],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    return {
+      exists: false,
+      hasPassword: false,
+    };
+  }
+
+  return {
+    exists: true,
+    hasPassword: row.has_password,
+  };
 }
 
 export async function authenticateGoogleUser(input: {
@@ -490,13 +549,17 @@ export async function getPostgresUserSnapshot(userId: string) {
        (u.password_hash is not null) as has_password,
        u.created_at,
        u.last_login_at,
+       u.onboarding_completed,
+       u.study_country,
+       u.study_board,
+       u.study_grade,
        count(s.id)::text as active_session_count
      from app_users u
      left join app_sessions s
        on s.user_id = u.id
       and s.expires_at > now()
      where u.id = $1
-     group by u.id, u.email, u.full_name, u.auth_provider, u.password_hash, u.created_at, u.last_login_at
+     group by u.id, u.email, u.full_name, u.auth_provider, u.password_hash, u.created_at, u.last_login_at, u.onboarding_completed, u.study_country, u.study_board, u.study_grade
      limit 1`,
     [userId],
   );
@@ -515,6 +578,10 @@ export async function getPostgresUserSnapshot(userId: string) {
     createdAt: row.created_at,
     lastLoginAt: row.last_login_at,
     activeSessionCount: Number.parseInt(row.active_session_count, 10),
+    onboardingCompleted: row.onboarding_completed,
+    studyCountry: row.study_country,
+    studyBoard: row.study_board,
+    studyGrade: row.study_grade,
   };
 }
 
@@ -537,6 +604,41 @@ export async function updateUserProfile(userId: string, input: { fullName: strin
   const user = result.rows[0];
   if (!user) {
     throw new Error('Unable to update the user profile.');
+  }
+
+  return user;
+}
+
+export async function completeUserOnboarding(input: {
+  userId: string;
+  studyCountry: string;
+  studyBoard: string;
+  studyGrade: string;
+}) {
+  await ensurePostgres();
+
+  const studyCountry = input.studyCountry.trim();
+  const studyBoard = input.studyBoard.trim();
+  const studyGrade = input.studyGrade.trim();
+
+  if (!studyCountry || !studyBoard || !studyGrade) {
+    throw new Error('Study profile fields are required.');
+  }
+
+  const result = await getPool().query<AuthenticatedUser>(
+    `update app_users
+     set study_country = $2,
+         study_board = $3,
+         study_grade = $4,
+         onboarding_completed = true
+     where id = $1
+     returning id, email, full_name as "fullName"`,
+    [input.userId, studyCountry, studyBoard, studyGrade],
+  );
+
+  const user = result.rows[0];
+  if (!user) {
+    throw new Error('Unable to update onboarding details.');
   }
 
   return user;
@@ -590,6 +692,47 @@ export async function updateUserPassword(input: {
     [userId, nextPasswordHash, getAuthProvider(true, Boolean(user.google_sub))],
   );
   await getPool().query('delete from app_sessions where user_id = $1', [userId]);
+}
+
+export async function deleteUserAccount(input: {
+  userId: string;
+  currentPassword?: string;
+}) {
+  await ensurePostgres();
+  const pool = getPool();
+  const currentPassword = input.currentPassword ?? '';
+
+  const result = await pool.query<UserCredentialsRow>(
+    `select id, email, full_name, auth_provider, google_sub, password_hash
+     from app_users
+     where id = $1
+     limit 1`,
+    [input.userId],
+  );
+
+  const user = result.rows[0];
+  if (!user) {
+    throw new Error('User profile was not found.');
+  }
+
+  if (user.password_hash) {
+    if (!currentPassword.trim()) {
+      throw new Error('Current password is required to delete this account.');
+    }
+
+    const passwordValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!passwordValid) {
+      throw new Error('Current password is incorrect.');
+    }
+  }
+
+  await pool.query('delete from app_users where id = $1', [input.userId]);
+
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: user.full_name,
+  } satisfies AuthenticatedUser;
 }
 
 export async function deleteAuthSession(token: string | undefined) {
@@ -663,4 +806,61 @@ export async function recordLiveEvent(
       console.warn('Unable to record PostgreSQL live event', error);
     }
   }
+}
+
+export async function saveLatestStudyPlan(studentId: string, plan: StudyPlanRecord) {
+  await ensurePostgres();
+  await getPool().query(
+    `insert into app_study_plans (student_id, plan_json, generated_at, updated_at)
+     values ($1, $2::jsonb, $3, now())
+     on conflict (student_id)
+     do update set
+       plan_json = excluded.plan_json,
+       generated_at = excluded.generated_at,
+       updated_at = now()`,
+    [studentId, JSON.stringify(plan), plan.generatedAt],
+  );
+}
+
+export async function getLatestStudyPlan(studentId: string): Promise<StudyPlanRecord | null> {
+  await ensurePostgres();
+  const result = await getPool().query<{ plan_json: unknown }>(
+    `select plan_json
+     from app_study_plans
+     where student_id = $1
+     limit 1`,
+    [studentId],
+  );
+
+  const raw = result.rows[0]?.plan_json;
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  return raw as StudyPlanRecord;
+}
+
+export async function getLiveSummaryCounts(studentId: string) {
+  await ensurePostgres();
+
+  const result = await getPool().query<{
+    quiz_generated: string;
+    study_logged: string;
+    exam_tracked: string;
+  }>(
+    `select
+       count(*) filter (where event_type = 'quiz_generated')::text as quiz_generated,
+       count(*) filter (where event_type = 'study_logged')::text as study_logged,
+       count(*) filter (where event_type = 'exam_tracked')::text as exam_tracked
+     from app_live_events
+     where metadata->>'studentId' = $1`,
+    [studentId],
+  );
+
+  const row = result.rows[0];
+  return {
+    quizCount: Number.parseInt(row?.quiz_generated ?? '0', 10) || 0,
+    studySessions: Number.parseInt(row?.study_logged ?? '0', 10) || 0,
+    examsTracked: Number.parseInt(row?.exam_tracked ?? '0', 10) || 0,
+  };
 }

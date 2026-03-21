@@ -5,6 +5,8 @@ import {
   authenticateUser,
   createAuthSession,
   enforceRateLimit,
+  getPostgresUserSnapshot,
+  lookupUserForLogin,
   recordLiveEvent,
 } from '@/lib/postgres';
 import { assertTrustedOrigin, getClientIp, getSessionCookieOptions } from '@/lib/security';
@@ -30,15 +32,38 @@ export async function POST(request: Request) {
 
     const user = await authenticateUser(payload.email, payload.password);
     if (!user) {
+      const lookup = await lookupUserForLogin(payload.email);
+      if (!lookup.exists) {
+        return NextResponse.json(
+          {
+            error: 'No account found for this email. Please create a new account.',
+            code: 'ACCOUNT_NOT_FOUND',
+          },
+          { status: 404 },
+        );
+      }
+
+      if (!lookup.hasPassword) {
+        return NextResponse.json(
+          {
+            error: 'This account uses Google sign-in. Use Google or set a password from your profile.',
+            code: 'PASSWORD_NOT_SET',
+          },
+          { status: 400 },
+        );
+      }
+
       return NextResponse.json(
         {
           error: 'Invalid email or password.',
+          code: 'INVALID_CREDENTIALS',
         },
         { status: 401 },
       );
     }
 
     const session = await createAuthSession(user.id);
+    const profile = await getPostgresUserSnapshot(user.id);
     await recordLiveEvent('login_success', {
       label: user.email,
       userId: user.id,
@@ -48,6 +73,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       success: true,
       user,
+      nextPath: profile.onboardingCompleted ? '/app' : '/welcome',
     });
 
     response.cookies.set(AUTH_COOKIE_NAME, session.token, getSessionCookieOptions(new Date(session.expiresAt)));

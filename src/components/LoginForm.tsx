@@ -52,25 +52,32 @@ export default function LoginForm({ googleEnabled }: LoginFormProps) {
         body: JSON.stringify(
           isSignUp
             ? {
-                email,
-                password,
-                fullName: name,
-              }
+              email,
+              password,
+              fullName: name,
+            }
             : {
-                email,
-                password,
-              },
+              email,
+              password,
+            },
         ),
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        code?: string;
+        nextPath?: string;
+      };
 
       if (!response.ok) {
+        if (payload.code === 'ACCOUNT_NOT_FOUND' && !isSignUp) {
+          setIsSignUp(true);
+        }
         throw new Error(payload.error || 'Unable to continue.');
       }
 
       startTransition(() => {
-        router.push('/app');
+        router.push(payload.nextPath || '/app');
         router.refresh();
       });
     } catch (authError) {
@@ -84,7 +91,7 @@ export default function LoginForm({ googleEnabled }: LoginFormProps) {
       <div className="absolute inset-4 bg-black/60 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0" />
 
       <div className="relative z-10 w-full p-8 sm:p-10 rounded-2xl bg-slate-900/90 border border-white/10 shadow-[8px_8px_20px_rgba(0,0,0,0.6)] backdrop-blur-md overflow-hidden">
-        
+
         {/* Top tape piece */}
         <div className="absolute top-0 right-12 w-16 h-4 bg-white/20 border border-white/10 backdrop-blur-sm rotate-2 z-30 shadow-sm" />
 

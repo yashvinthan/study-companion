@@ -181,17 +181,17 @@ export interface AuthSession {
 export interface RecentLiveEvent {
   id: number;
   eventType:
-    | 'login_success'
-    | 'logout'
-    | 'chat_request'
-    | 'plan_generated'
-    | 'quiz_generated'
-    | 'quiz_answered'
-    | 'study_logged'
-    | 'exam_tracked'
-    | 'signup_success'
-    | 'profile_updated'
-    | 'password_updated';
+  | 'login_success'
+  | 'logout'
+  | 'chat_request'
+  | 'plan_generated'
+  | 'quiz_generated'
+  | 'quiz_answered'
+  | 'study_logged'
+  | 'exam_tracked'
+  | 'signup_success'
+  | 'profile_updated'
+  | 'password_updated';
   label: string;
   createdAt: string;
   metadata: Record<string, unknown>;
@@ -201,22 +201,22 @@ export interface ActivityFeedItem {
   id: string;
   source: 'hindsight' | 'postgres';
   type:
-    | 'quiz_record'
-    | 'study_session'
-    | 'exam_event'
-    | 'study_plan'
-    | 'chat_event'
-    | 'login_success'
-    | 'logout'
-    | 'chat_request'
-    | 'plan_generated'
-    | 'quiz_generated'
-    | 'quiz_answered'
-    | 'study_logged'
-    | 'exam_tracked'
-    | 'signup_success'
-    | 'profile_updated'
-    | 'password_updated';
+  | 'quiz_record'
+  | 'study_session'
+  | 'exam_event'
+  | 'study_plan'
+  | 'chat_event'
+  | 'login_success'
+  | 'logout'
+  | 'chat_request'
+  | 'plan_generated'
+  | 'quiz_generated'
+  | 'quiz_answered'
+  | 'study_logged'
+  | 'exam_tracked'
+  | 'signup_success'
+  | 'profile_updated'
+  | 'password_updated';
   title: string;
   description: string;
   timestamp: string;
@@ -231,6 +231,10 @@ export interface ProfileSnapshot {
   createdAt: string | null;
   lastLoginAt: string | null;
   activeSessionCount: number;
+  onboardingCompleted: boolean;
+  studyCountry: string | null;
+  studyBoard: string | null;
+  studyGrade: string | null;
   quizRecordCount: number;
   studySessionCount: number;
   examCount: number;

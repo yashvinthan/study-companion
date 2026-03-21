@@ -1,10 +1,20 @@
 import { redirect } from 'next/navigation';
 import { LockKeyhole, ShieldCheck } from 'lucide-react';
+import type { Metadata } from 'next';
 import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import { getCurrentSession } from '@/lib/auth';
 import { isGoogleOAuthConfigured } from '@/lib/config';
+
+export const metadata: Metadata = {
+  title: 'Login',
+  description: 'Sign in to StudyTether to access your personalized study dashboard and plan.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const securityNotes = [
   'Your study history and quiz scores are auto-saved.',

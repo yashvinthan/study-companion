@@ -5,6 +5,9 @@ import { memoryStore } from '@/lib/memory/MemoryStore';
 import type { QuizPromptEntry, QuizQuestion, QuizRecord } from '@/lib/types';
 import { normalizeAnswer } from '@/lib/utils';
 
+const QUIZ_LLM_TIMEOUT_MS = 20_000;
+const QUIZ_HISTORY_TIMEOUT_MS = 2_500;
+
 const quizQuestionSchema = z.object({
   subject: z.string().min(1),
   topic: z.string().min(1),
@@ -19,6 +22,13 @@ const shortAnswerEvaluationSchema = z.object({
   correct: z.boolean(),
   feedback: z.string().min(1),
 });
+
+const GROQ_PROVIDER_OPTIONS = {
+  openai: {
+    reasoning_effort: 'low',
+    service_tier: 'on_demand',
+  },
+} as const;
 
 function resolveMultipleChoiceAnswer(options: string[], rawAnswer: string) {
   const trimmed = rawAnswer.trim();
@@ -51,8 +61,31 @@ function normalizeQuestionAnswer(question: QuizQuestion, rawAnswer: string) {
 }
 
 export class QuizEngine {
+  private readonly volatilePrompts = new Map<string, QuizPromptEntry>();
+
   async generateQuiz(studentId: string, subject: string, topic?: string) {
-    const recentRecords = await memoryStore.listEntries<QuizRecord>(studentId, 'quiz_record');
+    let recentRecords: QuizRecord[] = [];
+    try {
+      const historyPromise = memoryStore
+        .listEntries<QuizRecord>(studentId, 'quiz_record')
+        .catch((error) => {
+          console.warn('Quiz generation: unable to load recent records, continuing without history.', error);
+          return [] as QuizRecord[];
+        });
+      recentRecords = await Promise.race([
+        historyPromise,
+        new Promise<QuizRecord[]>((resolve) => {
+          setTimeout(() => {
+            console.warn(
+              `Quiz generation: quiz history lookup exceeded ${QUIZ_HISTORY_TIMEOUT_MS}ms; continuing without history.`,
+            );
+            resolve([]);
+          }, QUIZ_HISTORY_TIMEOUT_MS);
+        }),
+      ]);
+    } catch (error) {
+      console.warn('Quiz generation: unable to load recent records, continuing without history.', error);
+    }
     const matchingRecords = recentRecords
       .filter((record) => record.subject.toLowerCase() === subject.toLowerCase())
       .slice(0, 10);
@@ -61,20 +94,45 @@ export class QuizEngine {
       .map((record) => `- ${record.questionText}`)
       .join('\n');
 
-    const { object } = await generateObject({
-      model: getGroqModel(),
-      schema: quizQuestionSchema,
-      system:
-        'You generate crisp revision questions for students. Return one question only. Make it challenging but answerable without external context. Use multiple choice, true/false, or short answer.',
-      prompt: [
-        `Subject: ${subject}`,
-        `Preferred topic: ${topic || 'Choose the highest-value topic within the subject.'}`,
-        'Do not repeat or closely paraphrase any of the recent questions below.',
-        repeatAvoidance || '- No recent questions on record.',
-        'For multiple choice, return exactly four options and set correctAnswer to the full correct option text.',
-        'For true_false, options should be ["True", "False"] and correctAnswer should be either "True" or "False".',
-      ].join('\n'),
-    });
+    let object: z.infer<typeof quizQuestionSchema>;
+    try {
+      const result = await generateObject({
+        model: getGroqModel(),
+        abortSignal: AbortSignal.timeout(QUIZ_LLM_TIMEOUT_MS),
+        maxOutputTokens: 600,
+        providerOptions: GROQ_PROVIDER_OPTIONS,
+        schema: quizQuestionSchema,
+        system:
+          'You generate crisp revision questions for students. Return one question only. Make it challenging but answerable without external context. Use multiple choice, true/false, or short answer.',
+        prompt: [
+          `Subject: ${subject}`,
+          `Preferred topic: ${topic || 'Choose the highest-value topic within the subject.'}`,
+          'Do not repeat or closely paraphrase any of the recent questions below.',
+          repeatAvoidance || '- No recent questions on record.',
+          'For multiple choice, return exactly four options and set correctAnswer to the full correct option text.',
+          'For true_false, options should be ["True", "False"] and correctAnswer should be either "True" or "False".',
+        ].join('\n'),
+      });
+      object = result.object;
+    } catch (error) {
+      console.warn('Quiz generation failed; falling back to deterministic question.', error);
+      object = {
+        subject,
+        topic: topic || 'Foundations',
+        format: 'multiple_choice',
+        prompt: `In ${subject}, which statement best explains "${topic || 'core concept'}"?`,
+        options: [
+          'It is a measurable physical quantity with both magnitude and direction.',
+          'It is always constant and independent of reference frame.',
+          'It can never be represented mathematically.',
+          'It has no relation to real-world motion.',
+        ],
+        correctAnswer:
+          'It is a measurable physical quantity with both magnitude and direction.',
+        explanation:
+          'Core concepts are best defined with precise measurable properties and context, not absolute assumptions.',
+      };
+    }
 
     const question: QuizQuestion = {
       questionId: crypto.randomUUID(),
@@ -103,14 +161,33 @@ export class QuizEngine {
       requestLabel: `${question.subject} / ${question.topic}`,
     };
 
-    await memoryStore.retainEntry(promptEntry);
+    this.volatilePrompts.set(studentId, promptEntry);
+    try {
+      await memoryStore.retainEntry(promptEntry);
+    } catch (error) {
+      console.warn('Quiz prompt retain failed; keeping prompt in volatile memory.', error);
+    }
     return promptEntry;
   }
 
   async getPendingPrompt(studentId: string) {
-    const prompts = await memoryStore.listEntries<QuizPromptEntry>(studentId, 'quiz_prompt');
-    const records = await memoryStore.listEntries<QuizRecord>(studentId, 'quiz_record');
+    const volatilePrompt = this.volatilePrompts.get(studentId);
+    let prompts: QuizPromptEntry[] = [];
+    let records: QuizRecord[] = [];
+
+    try {
+      prompts = await memoryStore.listEntries<QuizPromptEntry>(studentId, 'quiz_prompt');
+      records = await memoryStore.listEntries<QuizRecord>(studentId, 'quiz_record');
+    } catch (error) {
+      console.warn('Unable to load quiz history from memory; using volatile prompt only.', error);
+      return volatilePrompt ?? null;
+    }
+
     const answeredSessionIds = new Set(records.map((record) => record.session_id));
+
+    if (volatilePrompt && !answeredSessionIds.has(volatilePrompt.session_id)) {
+      return volatilePrompt;
+    }
 
     return prompts.find((prompt) => !answeredSessionIds.has(prompt.session_id)) ?? null;
   }
@@ -119,7 +196,7 @@ export class QuizEngine {
     const prompt = await this.getPendingPrompt(studentId);
 
     if (!prompt) {
-      throw new Error('No active quiz question. Start one with /quiz <subject>.');
+      throw new Error('No active quiz question. Ask for a quiz first (for example: "Quiz me on Physics kinematics").');
     }
 
     const normalizedStudentAnswer = normalizeQuestionAnswer(prompt.question, answer);
@@ -129,6 +206,9 @@ export class QuizEngine {
     if (prompt.question.format === 'short_answer') {
       const { object } = await generateObject({
         model: getGroqModel(),
+        abortSignal: AbortSignal.timeout(QUIZ_LLM_TIMEOUT_MS),
+        maxOutputTokens: 350,
+        providerOptions: GROQ_PROVIDER_OPTIONS,
         schema: shortAnswerEvaluationSchema,
         system:
           'You evaluate short answers. Mark answers correct when they are conceptually equivalent, not only exact string matches.',
@@ -169,7 +249,12 @@ export class QuizEngine {
       feedback,
     };
 
-    await memoryStore.retainEntry(record);
+    this.volatilePrompts.delete(studentId);
+    try {
+      await memoryStore.retainEntry(record);
+    } catch (error) {
+      console.warn('Quiz record retain failed; evaluation will still be returned.', error);
+    }
     return {
       prompt,
       record,
@@ -193,7 +278,7 @@ export class QuizEngine {
       );
     }
 
-    lines.push('', 'Reply with /answer <your answer>.');
+    lines.push('', 'Reply with your answer (for example: A, True, or your written answer).');
     return lines.join('\n');
   }
 }

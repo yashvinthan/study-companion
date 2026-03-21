@@ -1,15 +1,21 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME, GOOGLE_OAUTH_NONCE_COOKIE_NAME, GOOGLE_OAUTH_STATE_COOKIE_NAME, GOOGLE_OAUTH_VERIFIER_COOKIE_NAME } from '@/lib/auth';
-import { ConfigError } from '@/lib/config';
+import { ConfigError, assertAppBaseUrl } from '@/lib/config';
 import { exchangeGoogleCode } from '@/lib/google-auth';
-import { authenticateGoogleUser, createAuthSession, enforceRateLimit, recordLiveEvent } from '@/lib/postgres';
+import {
+  authenticateGoogleUser,
+  createAuthSession,
+  enforceRateLimit,
+  getPostgresUserSnapshot,
+  recordLiveEvent,
+} from '@/lib/postgres';
 import { getClientIp, getOAuthCookieOptions, getSessionCookieOptions, safeEqual } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
-function redirectToLogin(request: Request, errorCode: string) {
-  const url = new URL('/login', request.url);
+function redirectToLogin(errorCode: string) {
+  const url = new URL('/login', assertAppBaseUrl());
   url.searchParams.set('error', errorCode);
   return NextResponse.redirect(url);
 }
@@ -48,6 +54,7 @@ export async function GET(request: Request) {
     });
     const result = await authenticateGoogleUser(googleIdentity);
     const session = await createAuthSession(result.user.id);
+    const profile = await getPostgresUserSnapshot(result.user.id);
 
     await recordLiveEvent(result.action === 'signup' ? 'signup_success' : 'login_success', {
       label: result.user.email,
@@ -57,7 +64,9 @@ export async function GET(request: Request) {
       action: result.action,
     });
 
-    const response = NextResponse.redirect(new URL('/app', request.url));
+    const response = NextResponse.redirect(
+      new URL(profile.onboardingCompleted ? '/app' : '/welcome', assertAppBaseUrl()),
+    );
     response.cookies.set(
       AUTH_COOKIE_NAME,
       session.token,
@@ -72,7 +81,6 @@ export async function GET(request: Request) {
     console.error('Google OAuth callback failed', error);
 
     const response = redirectToLogin(
-      request,
       error instanceof ConfigError ? 'google_unavailable' : 'google_signin_failed',
     );
 

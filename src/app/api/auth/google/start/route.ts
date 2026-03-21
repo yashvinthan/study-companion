@@ -4,7 +4,7 @@ import {
   GOOGLE_OAUTH_STATE_COOKIE_NAME,
   GOOGLE_OAUTH_VERIFIER_COOKIE_NAME,
 } from '@/lib/auth';
-import { ConfigError } from '@/lib/config';
+import { ConfigError, assertAppBaseUrl } from '@/lib/config';
 import { createGoogleAuthorizationRequest } from '@/lib/google-auth';
 import { enforceRateLimit } from '@/lib/postgres';
 import { getClientIp, getOAuthCookieOptions } from '@/lib/security';
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Google OAuth start failed', error);
 
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/login', assertAppBaseUrl());
     loginUrl.searchParams.set(
       'error',
       error instanceof ConfigError ? 'google_unavailable' : 'google_start_failed',

@@ -5,9 +5,19 @@ import { assertTrustedOrigin, getSessionCookieOptions } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
+export async function GET(request: Request) {
+  return handleLogout(request);
+}
+
 export async function POST(request: Request) {
+  return handleLogout(request);
+}
+
+async function handleLogout(request: Request) {
   try {
-    assertTrustedOrigin(request);
+    if (request.method !== 'GET') {
+      assertTrustedOrigin(request);
+    }
 
     const cookieHeader = request.headers.get('cookie') || '';
     const token = cookieHeader

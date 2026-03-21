@@ -1,8 +1,16 @@
 import { mistakeTracker } from '@/lib/engines/Mistake_Tracker';
 import { scheduleManager } from '@/lib/engines/Schedule_Manager';
 import { memoryStore } from '@/lib/memory/MemoryStore';
+import { saveLatestStudyPlan } from '@/lib/postgres';
 import type { QuizRecord, StudyPlanItem, StudyPlanRecord, WeakArea } from '@/lib/types';
 import { clamp, daysUntil, toIsoDate } from '@/lib/utils';
+
+export class PlanGenerationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PlanGenerationError';
+  }
+}
 
 function addDays(date: Date, offset: number) {
   const next = new Date(date);
@@ -35,48 +43,121 @@ function createPlanItem(
 export class PlanGenerator {
   async generate(studentId: string, horizonDays: number) {
     const safeHorizonDays = clamp(Math.round(horizonDays), 1, 90);
-    const quizRecords = await memoryStore.listEntries<QuizRecord>(studentId, 'quiz_record');
-    const weakAreaResult = await mistakeTracker.getWeakAreas(studentId);
-    const weakAreas = weakAreaResult.weakAreas;
-    const examEvents = await scheduleManager.listUpcomingExams(studentId);
-    const averageDailyMinutesBySubject =
-      await scheduleManager.getAverageDailyMinutesBySubject(studentId);
+    const [quizRecords, examEvents, averageDailyMinutesBySubject] = await Promise.all([
+      memoryStore.listEntries<QuizRecord>(studentId, 'quiz_record').catch((error) => {
+        console.warn('Plan generation: unable to load quiz records, using empty history.', error);
+        return [] as QuizRecord[];
+      }),
+      scheduleManager.listUpcomingExams(studentId).catch((error) => {
+        console.warn('Plan generation: unable to load upcoming exams, continuing without exam context.', error);
+        return [];
+      }),
+      scheduleManager.getAverageDailyMinutesBySubject(studentId).catch((error) => {
+        console.warn(
+          'Plan generation: unable to load average daily minutes by subject, using default caps.',
+          error,
+        );
+        return new Map<string, number>();
+      }),
+    ]);
 
-    const plan =
-      quizRecords.length < 3
-        ? this.buildGenericPlan(studentId, safeHorizonDays, examEvents.map((exam) => exam.subject))
-        : this.buildAdaptivePlan(
-            studentId,
-            safeHorizonDays,
-            weakAreas,
-            examEvents,
-            averageDailyMinutesBySubject,
-          );
+    let weakAreas: WeakArea[] = [];
+    if (quizRecords.length > 0) {
+      try {
+        weakAreas = (await mistakeTracker.computePatterns(studentId, quizRecords)).filter(
+          (pattern) => pattern.weakArea,
+        );
+      } catch (error) {
+        console.warn('Plan generation: unable to compute weak areas, continuing with available context.', error);
+      }
+    }
 
-    await memoryStore.retainEntry(plan);
+    const knownTopicsBySubject = new Map<string, string>();
+    for (const exam of examEvents) {
+      if (!knownTopicsBySubject.has(exam.subject) && exam.topic?.trim()) {
+        knownTopicsBySubject.set(exam.subject, exam.topic);
+      }
+    }
+    for (const weakArea of weakAreas) {
+      if (!knownTopicsBySubject.has(weakArea.subject) && weakArea.topic.trim()) {
+        knownTopicsBySubject.set(weakArea.subject, weakArea.topic);
+      }
+    }
+    for (const quizRecord of quizRecords) {
+      if (!knownTopicsBySubject.has(quizRecord.subject) && quizRecord.topic.trim()) {
+        knownTopicsBySubject.set(quizRecord.subject, quizRecord.topic);
+      }
+    }
+
+    const knownSubjects = new Set<string>([
+      ...examEvents.map((exam) => exam.subject),
+      ...weakAreas.map((area) => area.subject),
+      ...quizRecords.map((record) => record.subject),
+      ...Array.from(averageDailyMinutesBySubject.keys()),
+    ]);
+
+    if (knownSubjects.size === 0) {
+      throw new PlanGenerationError(
+        'Cannot generate a production plan yet because no real study subject data exists. Log at least one study session, add one exam, or complete one quiz first.',
+      );
+    }
+
+    const onboardingTracks = Array.from(knownSubjects).map((subject) => ({
+      subject,
+      topic: knownTopicsBySubject.get(subject) ?? subject,
+    }));
+
+    let plan;
+    if (quizRecords.length < 3) {
+      plan = this.buildGenericPlan(studentId, safeHorizonDays, onboardingTracks);
+    } else {
+      plan = await this.buildAdaptivePlan(
+        studentId,
+        safeHorizonDays,
+        weakAreas,
+        examEvents,
+        averageDailyMinutesBySubject,
+      );
+    }
+
+    try {
+      await saveLatestStudyPlan(studentId, plan);
+    } catch (error) {
+      console.warn('Plan generation: failed to save latest plan in PostgreSQL fallback.', error);
+    }
+
+    try {
+      await memoryStore.retainEntry(plan);
+    } catch (error) {
+      console.warn('Plan generation: plan retain failed; returning generated plan without memory persistence.', error);
+    }
+
     return plan;
   }
 
-  private buildGenericPlan(studentId: string, horizonDays: number, examSubjects: string[]) {
+  private buildGenericPlan(
+    studentId: string,
+    horizonDays: number,
+    onboardingTracks: Array<{ subject: string; topic: string }>,
+  ) {
     const baseDate = new Date();
-    const fallbackSubjects = examSubjects.length ? examSubjects : ['Mathematics', 'Physics', 'Biology'];
     const items: StudyPlanItem[] = [];
     const rationale = [
-      'Fewer than three quiz records are available, so the plan is in onboarding mode.',
-      'Sessions stay moderate while the app learns the student cadence.',
+      'Fewer than three quiz records are available, so the plan stays in onboarding mode.',
+      'Only tracked user subjects are scheduled; no synthetic subjects are introduced.',
     ];
 
     for (let dayIndex = 0; dayIndex < horizonDays; dayIndex += 1) {
-      const subject = fallbackSubjects[dayIndex % fallbackSubjects.length];
+      const track = onboardingTracks[dayIndex % onboardingTracks.length];
       const date = iso(addDays(baseDate, dayIndex));
       items.push(
         createPlanItem(
           date,
-          subject,
-          'Foundations',
+          track.subject,
+          track.topic,
           45,
           'foundation',
-          'Build baseline recall before personalization kicks in.',
+          'Build baseline recall in a tracked subject before full personalization kicks in.',
         ),
       );
     }
@@ -84,7 +165,7 @@ export class PlanGenerator {
     return this.wrapPlan(studentId, horizonDays, true, items, rationale);
   }
 
-  private buildAdaptivePlan(
+  private async buildAdaptivePlan(
     studentId: string,
     horizonDays: number,
     weakAreas: WeakArea[],
@@ -231,6 +312,18 @@ export class PlanGenerator {
     }
 
     rationale.push('Daily minutes for each subject are capped at 150% of the recent average study duration.');
+
+    try {
+      const insight = await memoryStore.reflect(
+        studentId,
+        `Analyze the student's study history, recent weaknesses, and upcoming exams over the next ${horizonDays} days. What actionable advice or strategic focus should they have? Keep the response under 2 sentences.`
+      );
+      if (insight?.text) {
+        rationale.push(`Hindsight AI Insight: ${insight.text}`);
+      }
+    } catch (e) {
+      console.error('Failed to reflect on student study profile:', e);
+    }
 
     return this.wrapPlan(studentId, horizonDays, false, items, rationale);
   }

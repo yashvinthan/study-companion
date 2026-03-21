@@ -72,7 +72,12 @@ export class MistakeTracker {
       grouped.set(key, bucket);
     }
 
-    const snapshots = await memoryStore.listEntries<MistakePattern>(studentId, 'mistake_pattern');
+    const snapshots = await memoryStore
+      .listEntries<MistakePattern>(studentId, 'mistake_pattern')
+      .catch((error) => {
+        console.warn('Mistake pattern snapshots unavailable; continuing without historical snapshots.', error);
+        return [] as MistakePattern[];
+      });
     const latestSnapshots = new Map<string, MistakePattern>();
 
     for (const snapshot of snapshots) {
@@ -128,10 +133,12 @@ export class MistakeTracker {
       return null;
     }
 
-    const latestSnapshots = await memoryStore.listEntries<MistakePattern>(
-      record.student_id,
-      'mistake_pattern',
-    );
+    const latestSnapshots = await memoryStore
+      .listEntries<MistakePattern>(record.student_id, 'mistake_pattern')
+      .catch((error) => {
+        console.warn('Could not load latest mistake snapshots; continuing with current pattern only.', error);
+        return [] as MistakePattern[];
+      });
     const latestSnapshot = latestSnapshots.find(
       (snapshot) => snapshot.subject === record.subject && snapshot.topic === record.topic,
     );

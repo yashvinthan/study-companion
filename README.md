@@ -1,4 +1,4 @@
-# AI Study Companion
+# StudyTether
 
 Production-oriented Next.js application for study planning, quiz practice, weak-area tracking, and exam scheduling.
 
@@ -8,6 +8,7 @@ Production-oriented Next.js application for study planning, quiz practice, weak-
 - PostgreSQL for user accounts, session storage, rate limiting, and audit-style activity events
 - Hindsight for persistent study memory
 - Groq for quiz generation and study-plan synthesis
+- Automatic chat failover: Groq -> OpenAI -> Gemini when Groq rate limit is hit
 
 ## Routes
 
@@ -28,12 +29,12 @@ Copy `.env.example` to `.env.local` and provide real credentials:
 ```bash
 APP_BASE_URL=http://localhost:3000
 
-HINDSIGHT_BASE_URL=https://api.hindsight.vectorize.io
-HINDSIGHT_API_KEY=
-HINDSIGHT_BANK_PREFIX=study-companion
+HINDSIGHT_BASE_URL=http://localhost:8888
+HINDSIGHT_API_KEY=localdev
+HINDSIGHT_BANK_PREFIX=studytether
 
 GROQ_API_KEY=
-GROQ_MODEL=llama3-70b-8192
+GROQ_MODEL=openai/gpt-oss-20b
 
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
@@ -51,19 +52,20 @@ npm run dev
 
 ## Docker
 
-The included `docker-compose.yml` runs the app and PostgreSQL with safer defaults:
+The included `docker-compose.yml` runs the app, PostgreSQL, Hindsight, and a self-hosted SearXNG web-search service:
 
 - no pre-provisioned users
 - no seeded sample data endpoints
 - no public PostgreSQL port exposure
-- required secrets for PostgreSQL, Groq, and Hindsight
+- self-hosted open-source web search over internal Docker networking
+- required secrets for PostgreSQL and Groq. Hindsight runs locally without strict auth.
 
 Example:
 
 ```bash
 $env:POSTGRES_PASSWORD="replace-with-a-long-random-password"
 $env:GROQ_API_KEY="..."
-$env:HINDSIGHT_API_KEY="..."
+$env:SEARXNG_SECRET_KEY="replace-with-a-long-random-search-secret"
 docker compose up --build
 ```
 

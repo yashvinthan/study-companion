@@ -15,7 +15,7 @@ export default async function ChatPage() {
     <div className="space-y-5">
       <AppPageHeader
         eyebrow="Chat Coach"
-        title="Talk to the study companion with memory-aware context"
+        title="Talk to StudyTether with memory-aware context"
         description="Use natural questions and quick actions for quizzes, plans, weak-area review, and revision help. The rest of the workspace refreshes after each completed exchange."
         meta={
           <span className="app-chip">

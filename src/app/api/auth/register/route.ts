@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       success: true,
       user,
+      nextPath: '/welcome',
     });
 
     response.cookies.set(AUTH_COOKIE_NAME, session.token, getSessionCookieOptions(new Date(session.expiresAt)));

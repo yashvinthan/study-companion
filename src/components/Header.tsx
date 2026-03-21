@@ -11,7 +11,7 @@ export default function Header() {
               <BookOpen className="h-4 w-4" />
             </div>
             <span className="font-sans text-lg font-extrabold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-              Study<span className="text-emerald-400">Companion</span>
+              Study<span className="text-emerald-400">Tether</span>
             </span>
           </Link>
           

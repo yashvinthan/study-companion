@@ -17,6 +17,8 @@ export default function ProfileEditor({ profile }: ProfileEditorProps) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [nextPassword, setNextPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -83,6 +85,42 @@ export default function ProfileEditor({ profile }: ProfileEditorProps) {
       startTransition(() => router.refresh());
     } catch (passwordError) {
       setError(passwordError instanceof Error ? passwordError.message : 'Unable to update the password.');
+    }
+  }
+
+  async function submitDeleteAccount(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+
+    if (deleteConfirmText !== 'DELETE') {
+      setError('Type DELETE exactly to confirm account deletion.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          confirmText: deleteConfirmText,
+          currentPassword: deletePassword,
+        }),
+      });
+
+      const payload = (await response.json()) as { message?: string; error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Unable to delete account.');
+      }
+
+      startTransition(() => {
+        router.push('/login');
+        router.refresh();
+      });
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete account.');
     }
   }
 
@@ -242,6 +280,54 @@ export default function ProfileEditor({ profile }: ProfileEditorProps) {
           </form>
         </section>
       </div>
+
+      <section className="app-card border-red-400/30 bg-red-500/5 p-5">
+        <div className="space-y-2">
+          <p className="app-eyebrow text-red-200">Danger Zone</p>
+          <h2 className="text-xl font-semibold text-white">Delete account permanently</h2>
+          <p className="text-sm leading-6 text-red-100/80">
+            This permanently removes your account and active sessions. This action cannot be undone.
+          </p>
+        </div>
+
+        <form onSubmit={submitDeleteAccount} className="mt-5 space-y-4">
+          <Field label='Type "DELETE" to confirm' htmlFor="delete-confirm-text">
+            <input
+              id="delete-confirm-text"
+              name="deleteConfirmText"
+              type="text"
+              value={deleteConfirmText}
+              onChange={(event) => setDeleteConfirmText(event.target.value)}
+              autoComplete="off"
+              required
+              className="app-input border-red-300/30"
+            />
+          </Field>
+
+          {profile.hasPassword ? (
+            <Field label="Current password" htmlFor="delete-current-password">
+              <input
+                id="delete-current-password"
+                name="deleteCurrentPassword"
+                type="password"
+                value={deletePassword}
+                onChange={(event) => setDeletePassword(event.target.value)}
+                autoComplete="current-password"
+                required
+                className="app-input border-red-300/30"
+              />
+            </Field>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={isPending}
+            className="inline-flex w-full items-center justify-center rounded-xl border border-red-400/40 bg-red-500/20 px-4 py-3 text-sm font-semibold text-red-100 transition-colors hover:bg-red-500/30 disabled:opacity-60"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : 'Delete Account'}
+          </button>
+        </form>
+      </section>
     </div>
   );
 }

@@ -13,10 +13,55 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ['400', '500'],
 });
 
+const appUrl = process.env.APP_BASE_URL?.replace(/\/+$/, '') || 'https://studytether.online';
+
 export const metadata: Metadata = {
-  title: 'AI Study Companion',
+  metadataBase: new URL(appUrl),
+  title: {
+    default: 'StudyTether | AI Study Coach with Persistent Memory',
+    template: '%s | StudyTether',
+  },
   description:
-    'A persistent-memory study coach built with Next.js, Groq, and Hindsight for HackWithBangalore.',
+    'StudyTether is a persistent-memory AI study coach that personalizes quizzes, study plans, and revision schedules to improve exam performance.',
+  applicationName: 'StudyTether',
+  keywords: [
+    'StudyTether',
+    'AI study coach',
+    'study planner',
+    'exam preparation',
+    'revision assistant',
+    'student productivity',
+  ],
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'StudyTether',
+    title: 'StudyTether | AI Study Coach with Persistent Memory',
+    description:
+      'Personalized study plans, smart quizzes, and memory-backed coaching designed for serious exam prep.',
+    url: '/',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'StudyTether | AI Study Coach with Persistent Memory',
+    description:
+      'Personalized study plans, smart quizzes, and memory-backed coaching designed for serious exam prep.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  category: 'education',
 };
 
 export default function RootLayout({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentSession } from '@/lib/auth';
 import { scheduleManager } from '@/lib/engines/Schedule_Manager';
+import { MemoryStoreError } from '@/lib/memory/MemoryStore';
 import { enforceRateLimit, recordLiveEvent } from '@/lib/postgres';
 import { assertTrustedOrigin } from '@/lib/security';
 
@@ -73,6 +74,15 @@ export async function POST(request: Request) {
         error.message === 'Request origin could not be verified.')
     ) {
       return NextResponse.json({ error: 'Forbidden request origin.' }, { status: 403 });
+    }
+
+    if (error instanceof MemoryStoreError) {
+      return NextResponse.json(
+        {
+          error: `Hindsight memory is currently unavailable. ${error.message}`,
+        },
+        { status: 503 },
+      );
     }
 
     return NextResponse.json(

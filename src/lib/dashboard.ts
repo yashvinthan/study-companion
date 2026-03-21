@@ -1,7 +1,7 @@
 import { mistakeTracker } from '@/lib/engines/Mistake_Tracker';
 import { scheduleManager } from '@/lib/engines/Schedule_Manager';
 import { memoryStore } from '@/lib/memory/MemoryStore';
-import { getPostgresUserSnapshot, listRecentLiveEvents } from '@/lib/postgres';
+import { getLatestStudyPlan, getPostgresUserSnapshot, listRecentLiveEvents } from '@/lib/postgres';
 import type {
   ActivityFeedItem,
   ChatEvent,
@@ -15,36 +15,33 @@ import type {
 
 export async function getDashboardData(studentId: string): Promise<DashboardData> {
   const connection = await memoryStore.getConnectionStatus(studentId);
+  const memoryAvailable = connection.ok;
 
-  if (!connection.ok) {
-    return {
-      connection,
-      weakAreas: [],
-      recentSessions: [],
-      upcomingExams: [],
-      dueReminders: [],
-      latestPlan: null,
-      summary: {
-        quizCount: 0,
-        studySessions: 0,
-        examsTracked: 0,
-        averageDailyMinutes: 0,
-      },
-    };
-  }
+  const [
+    weakAreaResult,
+    recentSessions,
+    upcomingExams,
+    dueReminders,
+    latestPlanFromMemory,
+    latestPlanFromPg,
+    quizRecords,
+  ] = await Promise.all([
+    memoryAvailable
+      ? mistakeTracker.getWeakAreas(studentId)
+      : Promise.resolve({ weakAreas: [], message: 'Memory is temporarily unavailable.' }),
+    memoryAvailable ? scheduleManager.listStudySessions(studentId) : Promise.resolve([]),
+    memoryAvailable ? scheduleManager.getDashboardExams(studentId) : Promise.resolve([]),
+    memoryAvailable ? scheduleManager.getDueReminders(studentId) : Promise.resolve([]),
+    memoryAvailable
+      ? memoryStore.getLatestEntry<StudyPlanRecord>(studentId, 'study_plan')
+      : Promise.resolve(null),
+    getLatestStudyPlan(studentId).catch(() => null),
+    memoryAvailable ? memoryStore.listEntries<QuizRecord>(studentId, 'quiz_record') : Promise.resolve([]),
+  ]);
 
-  const [weakAreaResult, recentSessions, upcomingExams, dueReminders, latestPlan, quizRecords] =
-    await Promise.all([
-      mistakeTracker.getWeakAreas(studentId),
-      scheduleManager.listStudySessions(studentId),
-      scheduleManager.getDashboardExams(studentId),
-      scheduleManager.getDueReminders(studentId),
-      memoryStore.getLatestEntry<StudyPlanRecord>(studentId, 'study_plan'),
-      memoryStore.listEntries<QuizRecord>(studentId, 'quiz_record'),
-    ]);
-
-  const averageDailyMinutesBySubject =
-    await scheduleManager.getAverageDailyMinutesBySubject(studentId);
+  const averageDailyMinutesBySubject = memoryAvailable
+    ? await scheduleManager.getAverageDailyMinutesBySubject(studentId)
+    : new Map<string, number>();
   const averageDailyMinutes =
     averageDailyMinutesBySubject.size === 0
       ? 0
@@ -59,7 +56,7 @@ export async function getDashboardData(studentId: string): Promise<DashboardData
     recentSessions: recentSessions.slice(0, 8),
     upcomingExams,
     dueReminders,
-    latestPlan,
+    latestPlan: latestPlanFromMemory ?? latestPlanFromPg,
     summary: {
       quizCount: quizRecords.length,
       studySessions: recentSessions.length,
@@ -275,10 +272,14 @@ export async function getProfileSnapshot(userId: string, studentId: string): Pro
     hasPassword: dbUser.hasPassword,
     createdAt: dbUser.createdAt,
     lastLoginAt: dbUser.lastLoginAt,
+    onboardingCompleted: dbUser.onboardingCompleted,
+    studyCountry: dbUser.studyCountry,
+    studyBoard: dbUser.studyBoard,
+    studyGrade: dbUser.studyGrade,
     activeSessionCount: dbUser.activeSessionCount,
-    quizRecordCount: quizRecords.length,
-    studySessionCount: studySessions.length,
-    examCount: exams.length,
+    quizRecordCount: dashboardData.summary.quizCount,
+    studySessionCount: dashboardData.summary.studySessions,
+    examCount: dashboardData.summary.examsTracked,
     weakAreaCount: dashboardData.weakAreas.length,
     subjectsTracked: Array.from(subjectsTracked).toSorted(),
     connection,

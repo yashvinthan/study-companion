@@ -4,6 +4,7 @@ import { getGroqModel } from '@/lib/llm';
 import { memoryStore } from '@/lib/memory/MemoryStore';
 import type { QuizPromptEntry, QuizQuestion, QuizRecord } from '@/lib/types';
 import { normalizeAnswer } from '@/lib/utils';
+import { resolveMultipleChoiceAnswer } from './Quiz_Engine_utils';
 
 const QUIZ_LLM_TIMEOUT_MS = 20_000;
 const QUIZ_HISTORY_TIMEOUT_MS = 2_500;

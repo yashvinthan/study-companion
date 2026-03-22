@@ -40,7 +40,7 @@ export async function getDashboardData(studentId: string): Promise<DashboardData
   ]);
 
   const averageDailyMinutesBySubject = memoryAvailable
-    ? await scheduleManager.getAverageDailyMinutesBySubject(studentId)
+    ? await scheduleManager.getAverageDailyMinutesBySubject(studentId, recentSessions)
     : new Map<string, number>();
   const averageDailyMinutes =
     averageDailyMinutesBySubject.size === 0

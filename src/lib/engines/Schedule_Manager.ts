@@ -78,8 +78,8 @@ export class ScheduleManager {
       });
   }
 
-  async getAverageDailyMinutesBySubject(studentId: string) {
-    const sessions = await this.listStudySessions(studentId);
+  async getAverageDailyMinutesBySubject(studentId: string, preFetchedSessions?: StudySessionRecord[]) {
+    const sessions = preFetchedSessions ?? (await this.listStudySessions(studentId));
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const aggregates = new Map<
       string,

@@ -1,6 +1,9 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { assertAppBaseUrl } from '@/lib/config';
 
+export const ERROR_CORS_NOT_ALLOWED = 'Cross-origin requests are not allowed for this endpoint.';
+export const ERROR_ORIGIN_UNVERIFIED = 'Request origin could not be verified.';
+
 export function createOpaqueToken(size = 32) {
   return randomBytes(size).toString('hex');
 }
@@ -73,10 +76,10 @@ export function assertTrustedOrigin(request: Request) {
   }
 
   if (!origin && !referer && !fetchSite) {
-    throw new Error('Request origin could not be verified.');
+    throw new Error(ERROR_ORIGIN_UNVERIFIED);
   }
 
-  throw new Error('Cross-origin requests are not allowed for this endpoint.');
+  throw new Error(ERROR_CORS_NOT_ALLOWED);
 }
 
 export function getSessionCookieOptions(expires: Date) {

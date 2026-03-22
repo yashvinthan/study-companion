@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { resolveMultipleChoiceAnswer } from './Quiz_Engine_utils.ts';
+import { resolveMultipleChoiceAnswer } from './Quiz_Engine_utils';
 
 describe('resolveMultipleChoiceAnswer', () => {
   const options = ['First', 'Second', 'Third', 'Fourth'];

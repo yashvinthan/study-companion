@@ -1,0 +1,52 @@
+﻿
+> studytether@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.0 (Turbopack)
+- Environments: .env.local, .env
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 4.3s
+  Running TypeScript ...
+  Finished TypeScript in 4.7s ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/15) ...
+  Generating static pages using 15 workers (3/15) 
+  Generating static pages using 15 workers (7/15) 
+  Generating static pages using 15 workers (11/15) 
+Γ£ô Generating static pages using 15 workers (15/15) in 319ms
+  Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ ╞Æ /api/auth/google/callback
+Γö£ ╞Æ /api/auth/google/start
+Γö£ ╞Æ /api/auth/login
+Γö£ ╞Æ /api/auth/logout
+Γö£ ╞Æ /api/auth/register
+Γö£ ╞Æ /api/chat
+Γö£ ╞Æ /api/dashboard
+Γö£ ╞Æ /api/health
+Γö£ ╞Æ /api/profile
+Γö£ ╞Æ /api/profile/onboard
+Γö£ ╞Æ /api/schedule/exam
+Γö£ ╞Æ /api/schedule/study
+Γö£ ╞Æ /api/webhook/openclaw
+Γö£ ╞Æ /app
+Γö£ ╞Æ /app/activity
+Γö£ ╞Æ /app/chat
+Γö£ ╞Æ /app/dashboard
+Γö£ ╞Æ /app/plan
+Γö£ ╞Æ /app/profile
+Γö£ ╞Æ /app/profile/edit
+Γö£ ╞Æ /app/schedule
+Γö£ ╞Æ /login
+Γö£ Γùï /robots.txt
+Γö£ Γùï /sitemap.xml
+Γöö ╞Æ /welcome
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+

@@ -1,8 +1,33 @@
+﻿
+> studytether@0.1.0 lint
+> eslint
 
-C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\src\app\page.tsx
-   2:42   warning  'ShieldCheck' is defined but never used                          @typescript-eslint/no-unused-vars
-  80:123  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
-  84:146  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
 
-✖ 3 problems (2 errors, 1 warning)
+C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\git_add_safe.js
+   1:12  error    A `require()` style import is forbidden           @typescript-eslint/no-require-imports
+  13:11  warning  'status_code' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\src\components\ui\tetris-loader.tsx
+    3:44  warning  'useRef' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  225:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\src\components\ui\tetris-loader.tsx:225:9
+  223 |   useEffect(() => {
+  224 |     if (isClearing) return;
+> 225 |     if (checkAndReset()) return;
+      |         ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  226 |
+  227 |     if (!fallingPiece) {
+  228 |       setFallingPiece(createNewPiece());  react-hooks/set-state-in-effect
+
+C:\Users\yashv\dev\Hackathon Problem Statements\hackwithbangalore-20\study-companion\test-loader.mjs
+  2:10  warning  'dirname' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 5 problems (2 errors, 3 warnings)
 

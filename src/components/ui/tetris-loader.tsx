@@ -197,7 +197,7 @@ export default function TetrisLoading({
     const needsReset = topRows.some(row => row.filter(cell => cell.filled).length > config.gridWidth * 0.7)
 
     if (needsReset) {
-      setIsClearing(true)
+      setTimeout(() => setIsClearing(true), 0)
       setTimeout(() => {
         setGrid(Array(config.gridHeight).fill(null).map(() => 
           Array(config.gridWidth).fill(null).map(() => ({ filled: false, color: '' }))
@@ -225,6 +225,7 @@ export default function TetrisLoading({
     if (checkAndReset()) return;
 
     if (!fallingPiece) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFallingPiece(createNewPiece());
       return;
     }

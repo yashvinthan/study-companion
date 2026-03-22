@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { getPostgresUrl, ConfigError } from '../config.ts';
+import { getPostgresUrl, ConfigError } from '../config';
 
 describe('getPostgresUrl', () => {
   let originalPostgresUrl: string | undefined;

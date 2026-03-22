@@ -1,7 +1,8 @@
 import { test, describe } from 'node:test';
 import * as assert from 'node:assert';
-import { normalizeQuestionAnswer, resolveMultipleChoiceAnswer } from './Quiz_Engine.ts';
-import type { QuizQuestion } from '../types.ts';
+import { normalizeQuestionAnswer } from './Quiz_Engine';
+import { resolveMultipleChoiceAnswer } from './Quiz_Engine_utils';
+import type { QuizQuestion } from '../types';
 
 describe('resolveMultipleChoiceAnswer', () => {
   const options = ['Option A', 'Option B', 'Option C', 'Option D'];

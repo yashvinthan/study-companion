@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { slugify } from './utils.ts';
+import { slugify } from './utils';
 
 describe('slugify', () => {
   it('should convert strings to lowercase', () => {

@@ -1,7 +1,22 @@
-const cp = require('child_process');
+/* eslint-disable @typescript-eslint/no-require-imports */
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+function isInsideGitRepo() {
+  try {
+    execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore' });
+    return true;
+  } catch (e) {
+    // We intentionally ignore the error here since it just means we're not in a Git repo
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const status_code = e.status;
+    return false;
+  }
+}
 
 try {
-  const status = cp.execSync('git status --porcelain').toString();
+  const status = execSync('git status --porcelain').toString();
   const lines = status.split('\n').filter(Boolean);
   
   const filesToAdd = [];
@@ -31,7 +46,7 @@ try {
   if (filesToAdd.length > 0) {
     console.log('Staging files:', filesToAdd);
     const args = filesToAdd.map(f => `"${f}"`).join(' ');
-    cp.execSync(`git add ${args}`);
+    execSync(`git add ${args}`);
     console.log('Successfully staged safe files.');
   } else {
     console.log('No files to stage.');

@@ -1,6 +1,6 @@
 import { test, describe, mock } from 'node:test';
 import * as assert from 'node:assert';
-import { ScheduleManager } from './Schedule_Manager.ts';
+import { ScheduleManager } from './Schedule_Manager';
 import { memoryStore } from '@/lib/memory/MemoryStore';
 
 describe('ScheduleManager', () => {

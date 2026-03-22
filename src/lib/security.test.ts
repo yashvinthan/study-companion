@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { assertTrustedOrigin } from './security.ts';
+import { assertTrustedOrigin } from './security';
 
 test('assertTrustedOrigin', async (t) => {
   // Helper to create a mock Request object
@@ -61,7 +61,7 @@ test('assertTrustedOrigin', async (t) => {
   await t.test('throws error when neither origin nor referer are present in production', () => {
     process.env.APP_BASE_URL = 'https://studycompanion.app';
     const oldEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
+    (process.env as any).NODE_ENV = 'production';
 
     const req = createMockRequest('https://studycompanion.app/api/data', {});
 
@@ -70,19 +70,19 @@ test('assertTrustedOrigin', async (t) => {
       { message: 'Request origin could not be verified.' }
     );
 
-    process.env.NODE_ENV = oldEnv;
+    (process.env as any).NODE_ENV = oldEnv;
   });
 
   await t.test('allows request when neither origin nor referer are present in non-production mode', () => {
     process.env.APP_BASE_URL = 'https://studycompanion.app';
     const oldEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+    (process.env as any).NODE_ENV = 'development';
 
     const req = createMockRequest('https://studycompanion.app/api/data', {});
 
     assert.doesNotThrow(() => assertTrustedOrigin(req));
 
-    process.env.NODE_ENV = oldEnv;
+    (process.env as any).NODE_ENV = oldEnv;
   });
 
   await t.test('allows request when fetch site is same-origin', () => {

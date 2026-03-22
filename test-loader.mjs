@@ -1,5 +1,5 @@
 import { pathToFileURL } from 'node:url';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 export async function resolve(specifier, context, nextResolve) {
   if (specifier.startsWith('@/')) {

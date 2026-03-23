@@ -205,13 +205,20 @@ function SidebarContent({
         </div>
       </section>
 
+
       {showLogout ? (
-        <form action="/api/auth/logout" method="post" className="mt-auto">
-          <button type="submit" className="app-action-secondary w-full">
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-            Logout
-          </button>
-        </form>
+        <button
+          type="button"
+          className="app-action-secondary mt-auto w-full"
+          onClick={() => {
+            fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
+              window.location.href = '/login';
+            });
+          }}
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Logout
+        </button>
       ) : null}
     </>
   );

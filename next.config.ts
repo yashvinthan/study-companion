@@ -1,7 +1,5 @@
 import type { NextConfig } from 'next';
 
-const appOrigin = (process.env.APP_BASE_URL || '').replace(/\/+$/, '') || "'self'";
-
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
@@ -13,7 +11,7 @@ const contentSecurityPolicy = [
   "frame-ancestors 'none'",
   "manifest-src 'self'",
   "base-uri 'self'",
-  `form-action 'self' ${appOrigin}`,
+  "form-action 'self' https://studytether.online",
   "object-src 'none'",
 ].join('; ');
 

@@ -1,17 +1,19 @@
 import type { NextConfig } from 'next';
 
+const appOrigin = (process.env.APP_BASE_URL || '').replace(/\/+$/, '') || "'self'";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https://lh3.googleusercontent.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' ws: wss:",
+  "connect-src 'self' ws: wss: https://cloudflareinsights.com",
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "manifest-src 'self'",
   "base-uri 'self'",
-  "form-action 'self'",
+  `form-action 'self' ${appOrigin}`,
   "object-src 'none'",
 ].join('; ');
 

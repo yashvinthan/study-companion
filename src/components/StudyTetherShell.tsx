@@ -210,8 +210,9 @@ function SidebarContent({
         <button
           type="button"
           className="app-action-secondary mt-auto w-full"
-          onClick={() => {
-            window.location.assign('/api/auth/logout');
+          onClick={async () => {
+            await fetch('/api/auth/logout', { method: 'POST' }).catch(() => null);
+            window.location.assign('/login');
           }}
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />

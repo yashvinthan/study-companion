@@ -39,8 +39,8 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:
-      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
-      NODE_ENV: ${NODE_ENV:-development}
+      APP_BASE_URL: ${APP_BASE_URL:-https://studytether.online}
+      NODE_ENV: ${NODE_ENV:-production}
       POSTGRES_URL: postgres://${POSTGRES_USER:-studycompanion}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your environment}@postgres:5432/${POSTGRES_DB:-study_companion}
       GROQ_API_KEY: ${GROQ_API_KEY:?Set GROQ_API_KEY in your environment}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}

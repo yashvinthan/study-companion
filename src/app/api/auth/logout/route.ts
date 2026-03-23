@@ -6,16 +6,16 @@ import { assertTrustedOrigin, ERROR_CORS_NOT_ALLOWED, ERROR_ORIGIN_UNVERIFIED, g
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  return handleLogout(request);
+  return handleLogout(request, 'GET');
 }
 
 export async function POST(request: Request) {
-  return handleLogout(request);
+  return handleLogout(request, 'POST');
 }
 
-async function handleLogout(request: Request) {
+async function handleLogout(request: Request, method: 'GET' | 'POST') {
   try {
-    if (request.method !== 'GET') {
+    if (method !== 'GET') {
       assertTrustedOrigin(request);
     }
 
@@ -39,15 +39,10 @@ async function handleLogout(request: Request) {
       });
     }
 
-    const requestUrl = new URL(request.url);
-    const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
-    if (host) {
-      requestUrl.host = host;
-    }
-    requestUrl.pathname = '/login';
-    requestUrl.search = '';
-
-    const response = NextResponse.redirect(requestUrl);
+    const response =
+      method === 'GET'
+        ? NextResponse.redirect(new URL('/login', request.url))
+        : NextResponse.json({ ok: true });
     response.cookies.set(AUTH_COOKIE_NAME, '', getSessionCookieOptions(new Date(0)));
 
     return response;

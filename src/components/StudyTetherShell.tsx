@@ -211,9 +211,7 @@ function SidebarContent({
           type="button"
           className="app-action-secondary mt-auto w-full"
           onClick={() => {
-            fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
-              window.location.href = '/login';
-            });
+            window.location.assign('/api/auth/logout');
           }}
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />

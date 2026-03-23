@@ -4,6 +4,13 @@ import { assertAppBaseUrl } from '@/lib/config';
 export const ERROR_CORS_NOT_ALLOWED = 'Cross-origin requests are not allowed for this endpoint.';
 export const ERROR_ORIGIN_UNVERIFIED = 'Request origin could not be verified.';
 
+export class CorsValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CorsValidationError';
+  }
+}
+
 export function createOpaqueToken(size = 32) {
   return randomBytes(size).toString('hex');
 }
@@ -76,10 +83,10 @@ export function assertTrustedOrigin(request: Request) {
   }
 
   if (!origin && !referer && !fetchSite) {
-    throw new Error(ERROR_ORIGIN_UNVERIFIED);
+    throw new CorsValidationError(ERROR_ORIGIN_UNVERIFIED);
   }
 
-  throw new Error(ERROR_CORS_NOT_ALLOWED);
+  throw new CorsValidationError(ERROR_CORS_NOT_ALLOWED);
 }
 
 export function getSessionCookieOptions(expires: Date) {

@@ -9,7 +9,7 @@ import {
   updateUserPassword,
   updateUserProfile,
 } from '@/lib/postgres';
-import { assertTrustedOrigin, ERROR_CORS_NOT_ALLOWED, ERROR_ORIGIN_UNVERIFIED, getSessionCookieOptions } from '@/lib/security';
+import { assertTrustedOrigin, CorsValidationError, getSessionCookieOptions } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,10 +115,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 429 });
     }
 
-    if (
-      error instanceof Error &&
-      (error.message === ERROR_CORS_NOT_ALLOWED || error.message === ERROR_ORIGIN_UNVERIFIED)
-    ) {
+    if (error instanceof CorsValidationError) {
       return NextResponse.json({ error: 'Forbidden request origin.' }, { status: 403 });
     }
 
@@ -193,10 +190,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 429 });
     }
 
-    if (
-      error instanceof Error &&
-      (error.message === ERROR_CORS_NOT_ALLOWED || error.message === ERROR_ORIGIN_UNVERIFIED)
-    ) {
+    if (error instanceof CorsValidationError) {
       return NextResponse.json({ error: 'Forbidden request origin.' }, { status: 403 });
     }
 

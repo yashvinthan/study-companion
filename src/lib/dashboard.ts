@@ -50,6 +50,37 @@ export async function getDashboardData(studentId: string): Promise<DashboardData
             averageDailyMinutesBySubject.size,
         );
 
+  const studyInsights: string[] = [];
+  if (memoryAvailable) {
+    if (weakAreaResult.weakAreas.length > 0) {
+      const topWeak = weakAreaResult.weakAreas[0];
+      studyInsights.push(`Prioritize revising ${topWeak.subject} (${topWeak.topic}) to improve your ${topWeak.accuracyRate}% accuracy rate.`);
+    } else if (quizRecords.length > 0) {
+      studyInsights.push(`Great job! You have no critical weak areas. Keep practicing to maintain strong retention.`);
+    }
+
+    if (recentSessions.length === 0) {
+      studyInsights.push(`You haven't logged any recent study sessions. Consistency is key! Start a short Pomodoro session today.`);
+    } else {
+      const lastSessionDate = new Date(recentSessions[0].date);
+      const diffDays = Math.floor((Date.now() - lastSessionDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays > 2) {
+        studyInsights.push(`It's been ${diffDays} days since your last study session. Try a 25-minute review block to rebuild momentum.`);
+      } else {
+        studyInsights.push(`You're maintaining a good study streak. Reviewing missed questions will compound your progress.`);
+      }
+    }
+
+    if (upcomingExams.length > 0) {
+      const nextExam = upcomingExams[0];
+      if (nextExam.daysAway <= 7) {
+        studyInsights.push(`Exam alert: ${nextExam.subject} is just ${nextExam.daysAway} days away. Switch focus to full practice exams.`);
+      }
+    }
+  } else {
+    studyInsights.push('Memory engine is unavailable. Insights cannot be generated.');
+  }
+
   return {
     connection,
     weakAreas: weakAreaResult.weakAreas,
@@ -63,6 +94,7 @@ export async function getDashboardData(studentId: string): Promise<DashboardData
       examsTracked: upcomingExams.length,
       averageDailyMinutes,
     },
+    studyInsights,
   };
 }
 

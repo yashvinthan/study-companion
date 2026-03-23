@@ -4,7 +4,7 @@ import { getCurrentSession } from '@/lib/auth';
 import { scheduleManager } from '@/lib/engines/Schedule_Manager';
 import { MemoryStoreError } from '@/lib/memory/MemoryStore';
 import { enforceRateLimit, recordLiveEvent } from '@/lib/postgres';
-import { assertTrustedOrigin, ERROR_CORS_NOT_ALLOWED, ERROR_ORIGIN_UNVERIFIED } from '@/lib/security';
+import { assertTrustedOrigin, CorsValidationError } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,10 +70,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 429 });
     }
 
-    if (
-      error instanceof Error &&
-      (error.message === ERROR_CORS_NOT_ALLOWED || error.message === ERROR_ORIGIN_UNVERIFIED)
-    ) {
+    if (error instanceof CorsValidationError) {
       return NextResponse.json({ error: 'Forbidden request origin.' }, { status: 403 });
     }
 

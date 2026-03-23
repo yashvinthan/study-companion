@@ -51,8 +51,7 @@ function isPlaceholderSecret(value: string) {
     normalized.includes('replace_me') ||
     normalized.includes('changeme') ||
     normalized === 'localdev' ||
-    normalized === 'test' ||
-    normalized === 'dummy'
+    normalized === 'test'
   );
 }
 

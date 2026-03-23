@@ -156,6 +156,7 @@ export interface DashboardData {
     examsTracked: number;
     averageDailyMinutes: number;
   };
+  studyInsights: string[];
 }
 
 export interface MemorySearchResult {

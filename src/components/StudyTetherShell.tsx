@@ -58,6 +58,12 @@ const primaryNavigation: NavItem[] = [
     icon: CalendarClock,
   },
   {
+    href: '/app/tools',
+    label: 'Study Tools',
+    description: 'Summary, flashcards, timer, and calculator',
+    icon: Sparkles,
+  },
+  {
     href: '/app/activity',
     label: 'Activity',
     description: 'Timeline of account and study events',

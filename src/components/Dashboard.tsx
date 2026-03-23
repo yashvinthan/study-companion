@@ -42,6 +42,30 @@ export default function Dashboard({ data, loading, error }: DashboardProps) {
 
   return (
     <div className="space-y-5">
+      {data.studyInsights && data.studyInsights.length > 0 && (
+        <section className="app-shell-panel p-5 sm:p-6 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl border border-[var(--color-accent)]/20 bg-[var(--color-accent)]/10 p-3 text-[var(--color-accent)]">
+              <Radar className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div className="space-y-3 flex-1">
+              <div>
+                <p className="text-base font-semibold text-white">Study Insights</p>
+                <p className="app-copy">AI recommendations based on your recent activity.</p>
+              </div>
+              <ul className="space-y-2 mt-2 list-none">
+                {data.studyInsights.map((insight, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-[var(--color-accent)] mt-1 flex-shrink-0" />
+                    <span className="text-sm text-slate-300 leading-6">{insight}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="app-shell-panel p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-3">
